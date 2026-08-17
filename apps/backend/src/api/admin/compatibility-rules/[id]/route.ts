@@ -1,6 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
-import CompatibilityModuleService from "../../../modules/compatibility/service"
-import { COMPATIBILITY_MODULE } from "../../../modules/compatibility"
+import CompatibilityModuleService from "../../../../modules/compatibility/service"
+import { COMPATIBILITY_MODULE } from "../../../../modules/compatibility"
 
 /**
  * GET /admin/compatibility-rules/:id
@@ -41,10 +41,10 @@ export async function POST(
   )
 
   try {
-    const rule = await compatibilityService.updateCompatibilityRules(
-      req.params.id,
-      req.body
-    )
+    const rule = await compatibilityService.updateCompatibilityRules({
+      id: req.params.id,
+      ...(req.body as Record<string, unknown>),
+    })
 
     res.json({
       rule,
@@ -70,7 +70,9 @@ export async function DELETE(
   )
 
   try {
-    await compatibilityService.deleteCompatibilityRules(req.params.id)
+    await compatibilityService.deleteCompatibilityRules({
+      id: req.params.id,
+    })
 
     res.json({
       message: "Rule deleted successfully",

@@ -15,8 +15,6 @@ const SpecTemplateField = model.define("spec_template_field", {
   is_filterable: model.boolean().default(false), // Whether this field can be used for filtering
   is_required: model.boolean().default(false), // Whether this field must be filled
   sort_order: model.number().default(0), // Order to display fields
-  created_at: model.dateTime().defaultNow(),
-  updated_at: model.dateTime().defaultNow(),
 })
 
 export default SpecTemplateField

@@ -1,6 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
-import CompatibilityModuleService from "../../modules/compatibility/service"
-import { COMPATIBILITY_MODULE } from "../../modules/compatibility"
+import CompatibilityModuleService from "../../../modules/compatibility/service"
+import { COMPATIBILITY_MODULE } from "../../../modules/compatibility"
 
 /**
  * GET /admin/compatibility-rules
@@ -41,7 +41,9 @@ export async function POST(
   )
 
   try {
-    const rule = await compatibilityService.createCompatibilityRules(req.body)
+    const rule = await compatibilityService.createCompatibilityRules(
+      req.body as Parameters<typeof compatibilityService.createCompatibilityRules>[0]
+    )
 
     res.json({
       rule,

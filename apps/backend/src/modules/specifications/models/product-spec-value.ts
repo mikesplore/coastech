@@ -11,9 +11,6 @@ const ProductSpecValue = model.define("product_spec_value", {
   value_text: model.text().nullable(), // For string values
   value_number: model.number().nullable(), // For numeric values
   value_boolean: model.boolean().nullable(), // For boolean values
-  // enum values are stored as text in value_text
-  created_at: model.dateTime().defaultNow(),
-  updated_at: model.dateTime().defaultNow(),
 })
 
 export default ProductSpecValue

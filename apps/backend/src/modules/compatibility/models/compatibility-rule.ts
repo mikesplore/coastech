@@ -23,8 +23,6 @@ const CompatibilityRule = model.define("compatibility_rule", {
   
   is_active: model.boolean().default(true),
   priority: model.number().default(0), // Higher priority rules are checked first
-  created_at: model.dateTime().defaultNow(),
-  updated_at: model.dateTime().defaultNow(),
 })
 
 export default CompatibilityRule
