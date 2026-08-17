@@ -23,6 +23,9 @@ module.exports = defineConfig({
             id: "paystack",
             options: {
               secret_key: process.env.PAYSTACK_SECRET_KEY,
+              public_key: process.env.PAYSTACK_PUBLIC_KEY,
+              callback_url: process.env.PAYSTACK_CALLBACK_URL,
+              test_mode: process.env.PAYSTACK_TEST_MODE !== "false",
               base_url: process.env.PAYSTACK_BASE_URL,
             },
           },
@@ -37,6 +40,12 @@ module.exports = defineConfig({
     },
     compatibility: {
       resolve: "./src/modules/compatibility",
+      definition: {
+        isQueryable: true,
+      },
+    },
+    promotions: {
+      resolve: "./src/modules/promotions",
       definition: {
         isQueryable: true,
       },

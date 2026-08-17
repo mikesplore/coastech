@@ -42,6 +42,20 @@ Visit the [Quickstart Guide](https://docs.medusajs.com/learn/installation) to se
 
 Visit the [Docs](https://docs.medusajs.com/learn/installation#get-started) to learn more about our system requirements.
 
+## Hardware ingestion
+
+The backend includes an autonomous hardware ingestion command. It discovers a product page from a query, parses JSON-LD and metadata, downloads and uploads the image through Medusa's public file workflow, then creates a published product, default variant, USD price set, and technical metadata.
+
+```bash
+cd apps/backend
+HARDWARE_INGEST_QUERY="NVIDIA GeForce RTX 4090" \\
+HARDWARE_INGEST_PRICE_USD=1599.99 \\
+HARDWARE_INGEST_CATEGORY=graphics-cards-gpus \\
+npm run ingest:hardware
+```
+
+Use `HARDWARE_INGEST_SOURCE_URL` to bypass search discovery. A price override is recommended when the source page does not expose a USD offer. The command is idempotent for an existing handle or source URL and refuses to persist local image paths or non-public file-provider URLs.
+
 ## What is Medusa
 
 Medusa is a set of commerce modules and tools that allow you to build rich, reliable, and performant commerce applications without reinventing core commerce logic. The modules can be customized and used to build advanced ecommerce stores, marketplaces, or any product that needs foundational commerce primitives. All modules are open-source and freely available on npm.

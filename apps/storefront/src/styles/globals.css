@@ -1,6 +1,35 @@
+@import url("https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;700;800&family=Inter:wght@400;500;700&display=swap");
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
+
+:root {
+  --pcb-bg: #f9f9f9;
+  --pcb-surface: #ffffff;
+  --pcb-surface-raised: #eeeeee;
+  --pcb-ink: #1a1c1c;
+  --pcb-muted: #6b6461;
+  --pcb-copper: #ff6500;
+  --pcb-ok: #1daa5c;
+  --pcb-fail: #e5342b;
+}
+
+html,
+body {
+  background: var(--pcb-bg);
+  color: var(--pcb-ink);
+  font-family: "Hanken Grotesk", Inter, "IBM Plex Sans", system-ui, sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--pcb-bg);
+}
+
+::selection {
+  background: var(--pcb-copper);
+  color: var(--pcb-bg);
+}
 
 @layer utilities {
   /* Chrome, Safari and Opera */
@@ -51,8 +80,13 @@
 
 @layer components {
   .content-container {
-    @apply max-w-[1440px] w-full mx-auto px-6;
+    @apply max-w-7xl w-full mx-auto px-3 small:px-8;
   }
+
+  .marketplace-card { @apply rounded-lg border border-surface-variant bg-surface-container-lowest shadow-sm; }
+  .marketplace-pill { @apply rounded-full; }
+  .marketplace-price { @apply font-price-lg text-price-lg text-primary leading-none; }
+  .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
 
   .contrast-btn {
     @apply px-4 py-2 border border-black rounded-full hover:bg-black hover:text-white transition-colors duration-200 ease-in;
@@ -108,5 +142,39 @@
 
   .text-3xl-semi {
     @apply text-[32px] leading-[44px] font-semibold;
+  }
+
+  .trace-line {
+    background: linear-gradient(90deg, transparent, var(--pcb-copper), var(--pcb-ok), transparent);
+    height: 1px;
+    position: relative;
+  }
+
+  .trace-line::after {
+    animation: trace-pulse 2.8s ease-in-out infinite;
+    background: var(--pcb-ink);
+    border-radius: 999px;
+    box-shadow: 0 0 16px var(--pcb-ok);
+    content: "";
+    height: 5px;
+    left: 0;
+    position: absolute;
+    top: -2px;
+    width: 5px;
+  }
+}
+
+@keyframes trace-pulse {
+  0% { left: 0; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
 }

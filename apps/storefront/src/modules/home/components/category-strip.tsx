@@ -1,0 +1,7 @@
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { HttpTypes } from "@medusajs/types"
+import { Component, ComputerDesktop, LaptopMobile, Server } from "@medusajs/icons"
+
+export default function CategoryStrip({ categories }: { categories: HttpTypes.StoreProductCategory[] }) {
+  return <section className="content-container py-3 small:py-8"><h2 className="mb-3 text-lg font-bold text-on-surface">Shop by Category</h2><div className="flex justify-between gap-3 overflow-x-auto pb-2">{categories.filter((category) => !category.parent_category).slice(0, 7).map((category) => { const Icon = category.handle.includes("laptop") ? LaptopMobile : category.handle.includes("desktop") ? ComputerDesktop : category.handle.includes("network") || category.handle.includes("router") ? Server : Component; return <LocalizedClientLink key={category.id} href={`/categories/${category.handle}`} className="flex min-w-[88px] snap-start flex-col items-center gap-2 text-center text-xs text-on-surface-variant hover:text-primary"><span className="grid h-14 w-14 place-items-center rounded-xl border border-surface-variant bg-surface-container text-primary"><Icon className="h-7 w-7" /></span>{category.name}</LocalizedClientLink> })}</div></section>
+}

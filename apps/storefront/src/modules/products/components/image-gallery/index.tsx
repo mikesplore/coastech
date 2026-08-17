@@ -8,31 +8,13 @@ type ImageGalleryProps = {
 
 const ImageGallery = ({ images }: ImageGalleryProps) => {
   return (
-    <div className="flex items-start relative">
-      <div className="flex flex-col flex-1 small:mx-16 gap-y-4">
-        {images.map((image, index) => {
-          return (
-            <Container
-              key={image.id}
-              className="relative aspect-[29/34] w-full overflow-hidden bg-ui-bg-subtle"
-              id={image.id}
-            >
-              {!!image.url && (
-                <Image
-                  src={image.url}
-                  priority={index <= 2 ? true : false}
-                  className="absolute inset-0 rounded-rounded"
-                  alt={`Product image ${index + 1}`}
-                  fill
-                  sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
-                  style={{
-                    objectFit: "cover",
-                  }}
-                />
-              )}
-            </Container>
-          )
-        })}
+    <div className="relative">
+      <Container className="relative aspect-square w-full overflow-hidden rounded-lg bg-[#f5f5f5]" id={images[0]?.id}>
+        {images[0]?.url && <Image src={images[0].url} priority className="absolute inset-0 object-contain" alt="Product image" fill sizes="(max-width: 1024px) 100vw, 55vw" />}
+      </Container>
+      <div className="mt-4 grid grid-cols-5 gap-3">
+        {images.slice(0, 5).map((image, index) => <Container key={image.id} className={`relative aspect-square overflow-hidden rounded-lg border-2 bg-white ${index === 0 ? "border-orange-600" : "border-gray-200"}`}><Image src={image.url} alt={`Product thumbnail ${index + 1}`} fill className="object-contain p-2" sizes="120px" /></Container>)}
+        {images.length > 5 && <div className="grid aspect-square place-items-center rounded-lg border border-gray-200 text-sm text-gray-600">+{images.length - 5} Photos</div>}
       </div>
     </div>
   )

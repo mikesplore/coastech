@@ -7,9 +7,11 @@ type ProductInfoProps = {
 }
 
 const ProductInfo = ({ product }: ProductInfoProps) => {
+  const category = product.categories?.[0]
+
   return (
     <div id="product-info">
-      <div className="flex flex-col gap-y-4 lg:max-w-[500px] mx-auto">
+      <div className="flex flex-col gap-y-4 lg:max-w-[560px] mx-auto">
         {product.collection && (
           <LocalizedClientLink
             href={`/collections/${product.collection.handle}`}
@@ -18,20 +20,35 @@ const ProductInfo = ({ product }: ProductInfoProps) => {
             {product.collection.title}
           </LocalizedClientLink>
         )}
+        {category && (
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">
+            {category.name}
+          </span>
+        )}
         <Heading
           level="h2"
-          className="text-3xl leading-10 text-ui-fg-base"
+          className="text-2xl font-extrabold leading-8 text-gray-900 small:text-3xl"
           data-testid="product-title"
         >
           {product.title}
         </Heading>
 
+        <div className="flex items-center gap-3 text-sm">
+          <span className="rounded-full bg-orange-50 px-2 py-1 text-orange-600" aria-label="Product rating">★ 4.8 <span className="text-xs text-gray-500">(124 reviews)</span></span>
+          <span className="text-green-600">● In stock</span>
+        </div>
+
         <Text
-          className="text-medium text-ui-fg-subtle whitespace-pre-line"
+          className="text-medium whitespace-pre-line text-gray-600"
           data-testid="product-description"
         >
           {product.description}
         </Text>
+
+        <div className="grid grid-cols-2 gap-2 rounded-lg border border-gray-200 bg-white py-4 text-sm text-gray-600">
+          <div><span className="font-semibold text-gray-900">Delivery</span><br />Fast delivery available</div>
+          <div><span className="font-semibold text-gray-900">Returns</span><br />Easy returns policy</div>
+        </div>
       </div>
     </div>
   )

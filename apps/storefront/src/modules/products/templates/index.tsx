@@ -32,29 +32,31 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
   return (
     <>
       <div
-        className="content-container  flex flex-col small:flex-row small:items-start py-6 relative"
+        className="bg-[#f9f9f9] py-5 pb-24 small:py-8"
         data-testid="product-container"
       >
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
-          <ProductInfo product={product} />
-          <ProductTabs product={product} />
-        </div>
-        <div className="block w-full relative">
-          <ImageGallery images={images} />
-        </div>
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
-          <ProductOnboardingCta />
-          <Suspense
-            fallback={
-              <ProductActions
-                disabled={true}
-                product={product}
-                region={region}
-              />
-            }
-          >
-            <ProductActionsWrapper id={product.id} region={region} />
-          </Suspense>
+        <div className="content-container">
+          <div className="grid gap-8 rounded-lg bg-white p-4 shadow-sm small:p-8 medium:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
+            <div className="min-w-0">
+              <ImageGallery images={images} />
+            </div>
+            <div className="flex min-w-0 flex-col gap-y-6 medium:sticky medium:top-24 medium:self-start">
+              <ProductInfo product={product} />
+              <ProductOnboardingCta />
+              <Suspense
+                fallback={
+                  <ProductActions
+                    disabled={true}
+                    product={product}
+                    region={region}
+                  />
+                }
+              >
+                <ProductActionsWrapper id={product.id} region={region} />
+              </Suspense>
+              <ProductTabs product={product} />
+            </div>
+          </div>
         </div>
       </div>
       <div

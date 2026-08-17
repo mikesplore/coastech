@@ -11,6 +11,7 @@ import {
   createInventoryLevelsWorkflow,
   createPriceListsWorkflow,
   createProductCategoriesWorkflow,
+  createProductOptionsWorkflow,
   createProductsWorkflow,
   createRegionsWorkflow,
   createSalesChannelsWorkflow,
@@ -22,7 +23,9 @@ import {
   createTaxRegionsWorkflow,
   linkSalesChannelsToApiKeyWorkflow,
   linkSalesChannelsToStockLocationWorkflow,
+  updateProductsWorkflow,
 } from "@medusajs/medusa/core-flows";
+import { ingestHardwareCatalog } from "./ingest-hardware";
 
 /**
  * Seeds the Kenya computer-parts store (Set KES as default currency).
@@ -42,6 +45,7 @@ export default async function initial_data_seed({
     ModuleRegistrationName.FULFILLMENT
   );
   const specificationsModuleService = container.resolve("specifications")
+  const promotionsModuleService = container.resolve("promotions")
 
   // ---------------------------------------------------------------------------
   // Idempotency check: only run the full store/region/fulfillment setup once.
@@ -469,6 +473,33 @@ export default async function initial_data_seed({
     createdCollections?.forEach((c) => collectionByHandle.set(c.handle, c.id));
   }
   logger.info("Finished seeding collections.");
+
+  logger.info("Seeding reusable product options...");
+  const { data: existingProductOptions } = await query.graph({
+    entity: "product_option",
+    fields: ["id", "title"],
+    filters: { is_exclusive: false },
+  });
+  const existingProductOptionTitles = new Set(existingProductOptions.map((option) => option.title));
+  const reusableProductOptions = [
+    { title: "Capacity", values: ["8GB", "16GB", "32GB", "64GB", "1TB", "2TB"] },
+    { title: "Size", values: ["24-inch", "27-inch", "32-inch", "34-inch"] },
+    { title: "Configuration", values: ["Standard", "Gaming", "Office"] },
+  ];
+  const missingProductOptions = reusableProductOptions.filter(
+    (option) => !existingProductOptionTitles.has(option.title)
+  );
+  if (missingProductOptions.length > 0) {
+    await createProductOptionsWorkflow(container).run({
+      input: {
+        product_options: missingProductOptions.map((option) => ({
+          ...option,
+          is_exclusive: false,
+        })),
+      },
+    });
+  }
+  logger.info("Finished seeding reusable product options.");
 
   // ---------------------------------------------------------------------------
   // Products (only create if a known handle is missing).
@@ -986,9 +1017,30 @@ export default async function initial_data_seed({
       },
     });
   }
+
+  const { data: productsToMap } = await query.graph({
+    entity: "product",
+    fields: ["id"],
+  });
+
+  if (productsToMap.length > 0 && defaultSalesChannel?.id) {
+    await updateProductsWorkflow(container).run({
+      input: {
+        products: productsToMap.map((product) => ({
+          id: product.id,
+          collection_id: componentsCollectionId,
+          sales_channels: [{ id: defaultSalesChannel!.id }],
+        })),
+      },
+    });
+  }
+
   logger.info(
     `Finished seeding product data. Created ${productsToCreate.length} products.`
   );
+
+  logger.info("Fetching hardware catalog products...");
+  await ingestHardwareCatalog({ container });
 
   // ---------------------------------------------------------------------------
   // Specifications values (Phase 3) - map seeded product metadata to structured values.
@@ -1182,6 +1234,59 @@ export default async function initial_data_seed({
     logger.info("Compatibility rules already exist - skipping.")
   }
   logger.info("Finished seeding compatibility rules.")
+
+  const existingPromotionalAds = await promotionsModuleService.listPromotionalAds()
+  if (existingPromotionalAds.length === 0) {
+    await promotionsModuleService.createPromotionalAds([
+      {
+        eyebrow: "New arrivals",
+        title: "Laptops & gaming gear",
+        description: "Fresh hardware, practical prices, and fast local fulfillment.",
+        href: "/store",
+        placement: "homepage_carousel",
+        cta_label: "Shop now",
+        priority: 100,
+        is_active: true,
+      },
+      {
+        eyebrow: "Build with confidence",
+        title: "Every part earns its place",
+        description: "Use Coast Tech compatibility checks before you commit to a build.",
+        href: "/builder",
+        placement: "homepage_carousel",
+        cta_label: "Check Compatibility",
+        priority: 90,
+        is_active: true,
+      },
+      {
+        eyebrow: "Limited-time deals",
+        title: "Flash Deals & Clearance",
+        description: "Save on selected hardware while stock lasts.",
+        href: "/store",
+        placement: "homepage_flash_deals",
+        cta_label: "Shop deals",
+        discount_label: "-15% OFF",
+        priority: 100,
+        is_active: true,
+      },
+    ])
+    logger.info("Seeded promotional ads.")
+  }
+
+  if (existingPromotionalAds.length > 0 && !existingPromotionalAds.some((ad) => ad.placement === "homepage_flash_deals")) {
+    await promotionsModuleService.createPromotionalAds([{
+      eyebrow: "Limited-time deals",
+      title: "Flash Deals & Clearance",
+      description: "Save on selected hardware while stock lasts.",
+      href: "/store",
+      placement: "homepage_flash_deals",
+      cta_label: "Shop deals",
+      discount_label: "-15% OFF",
+      priority: 100,
+      is_active: true,
+    }])
+    logger.info("Seeded homepage flash-deal configuration.")
+  }
 
   // ---------------------------------------------------------------------------
   // Inventory levels (only for the products we just created).

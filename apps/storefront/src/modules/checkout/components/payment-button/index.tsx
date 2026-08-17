@@ -1,6 +1,6 @@
 "use client"
 
-import { isManual, isStripeLike } from "@lib/constants"
+import { isManual, isPaystack, isStripeLike } from "@lib/constants"
 import { placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
@@ -39,9 +39,45 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
       return (
         <ManualTestPaymentButton notReady={notReady} data-testid={dataTestId} />
       )
+    case isPaystack(paymentSession?.provider_id):
+      return <PaystackPaymentButton notReady={notReady} cart={cart} data-testid={dataTestId} />
     default:
       return <Button disabled>Select a payment method</Button>
   }
+}
+
+const PaystackPaymentButton = ({
+  cart,
+  notReady,
+  "data-testid": dataTestId,
+}: {
+  cart: HttpTypes.StoreCart
+  notReady: boolean
+  "data-testid"?: string
+}) => {
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const session = cart.payment_collection?.payment_sessions?.find((item) => item.status === "pending")
+
+  const handlePayment = () => {
+    const authorizationUrl = session?.data?.authorization_url as string | undefined
+    if (!authorizationUrl) {
+      setErrorMessage("Paystack is not ready. Return to payment and try again.")
+      return
+    }
+    setSubmitting(true)
+    window.location.assign(authorizationUrl)
+  }
+
+  return (
+    <>
+      <Button disabled={notReady || !session} onClick={handlePayment} size="large" isLoading={submitting} data-testid={dataTestId}>
+        Continue to Paystack
+      </Button>
+      <p className="mt-2 text-xs text-ui-fg-subtle">Test mode: use Paystack’s test card or mobile money details.</p>
+      <ErrorMessage error={errorMessage} data-testid="paystack-payment-error-message" />
+    </>
+  )
 }
 
 const StripePaymentButton = ({

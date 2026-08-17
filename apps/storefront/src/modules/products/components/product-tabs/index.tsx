@@ -1,21 +1,21 @@
-"use client"
-
 import Back from "@modules/common/icons/back"
 import FastDelivery from "@modules/common/icons/fast-delivery"
 import Refresh from "@modules/common/icons/refresh"
 
 import Accordion from "./accordion"
 import { HttpTypes } from "@medusajs/types"
+import { getProductSpecifications } from "@lib/data/specifications"
 
 type ProductTabsProps = {
   product: HttpTypes.StoreProduct
 }
 
-const ProductTabs = ({ product }: ProductTabsProps) => {
+const ProductTabs = async ({ product }: ProductTabsProps) => {
+  const specs = product.id ? await getProductSpecifications(product.id).catch(() => ({ specifications: [] })) : { specifications: [] }
   const tabs = [
     {
       label: "Product Information",
-      component: <ProductInfoTab product={product} />,
+      component: <ProductInfoTab product={product} specifications={specs.specifications} />,
     },
     {
       label: "Shipping & Returns",
@@ -24,27 +24,30 @@ const ProductTabs = ({ product }: ProductTabsProps) => {
   ]
 
   return (
-    <div className="w-full">
-      <Accordion type="multiple">
-        {tabs.map((tab, i) => (
-          <Accordion.Item
-            key={i}
-            title={tab.label}
-            headingSize="medium"
-            value={tab.label}
-          >
-            {tab.component}
-          </Accordion.Item>
-        ))}
-      </Accordion>
+    <div className="w-full rounded-lg border border-gray-200 bg-white">
+      <h2 className="border-b border-gray-200 px-5 py-4 text-2xl font-bold">Technical Specifications</h2>
+      <div className="divide-y divide-gray-200">{specs.specifications.length ? specs.specifications.map((specification) => <div key={specification.label} className="grid grid-cols-2 px-5 py-4 text-sm"><span className="text-gray-600">{specification.label}</span><span className="text-right">{String(specification.value)}{specification.unit ? ` ${specification.unit}` : ""}</span></div>) : <div className="grid grid-cols-2 px-5 py-4 text-sm"><span className="text-gray-600">Description</span><span className="text-right">{product.description || "Coast Tech hardware"}</span></div>}</div>
+      <div className="mt-4 border-t border-gray-200 px-5 py-5"><ShippingInfoTab /></div>
     </div>
   )
 }
 
-const ProductInfoTab = ({ product }: ProductTabsProps) => {
+const ProductInfoTab = ({ product, specifications = [] }: ProductTabsProps & { specifications?: Array<{ label: string; value: unknown; unit?: string }> }) => {
   return (
     <div className="text-small-regular py-8">
-      <div className="grid grid-cols-2 gap-x-8">
+      <div className="grid gap-6">
+        {specifications.length > 0 && (
+          <div className="grid gap-2 border-b border-raised pb-6">
+            <p className="font-mono text-xs uppercase tracking-widest text-copper">Technical datasheet</p>
+            {specifications.map((specification) => (
+              <div key={specification.label} className="flex justify-between gap-4 border-b border-raised/70 py-2">
+                <span className="text-muted">{specification.label}</span>
+                <span className="text-right text-ink">{String(specification.value)}{specification.unit ? ` ${specification.unit}` : ""}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-x-8">
         <div className="flex flex-col gap-y-4">
           <div>
             <span className="font-semibold">Material</span>
@@ -73,6 +76,7 @@ const ProductInfoTab = ({ product }: ProductTabsProps) => {
             </p>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )

@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
 import { useRouter } from "next/navigation"
+import { useBuild } from "@lib/context/build-context"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -32,6 +33,7 @@ export default function ProductActions({
   product,
   disabled,
 }: ProductActionsProps) {
+  const { addPart } = useBuild()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -116,6 +118,8 @@ export default function ProductActions({
     return false
   }, [selectedVariant])
 
+  const hasPrice = Boolean(selectedVariant?.calculated_price?.calculated_amount)
+
   const actionsRef = useRef<HTMLDivElement>(null)
 
   const inView = useIntersection(actionsRef, "0px")
@@ -135,11 +139,33 @@ export default function ProductActions({
     setIsAdding(false)
   }
 
+  const handleBuyNow = async () => {
+    await handleAddToCart()
+    router.push(`/${countryCode}/cart`)
+  }
+
+  const handleAddToBuild = () => {
+    if (!selectedVariant?.id || !product.id) return
+    addPart({
+      slot: (product.categories?.[0]?.handle?.includes("processor") ? "cpu" :
+        product.categories?.[0]?.handle?.includes("motherboard") ? "motherboard" :
+        product.categories?.[0]?.handle?.includes("memory") ? "ram" :
+        product.categories?.[0]?.handle?.includes("graphics") ? "gpu" :
+        product.categories?.[0]?.handle?.includes("storage") ? "storage" :
+        product.categories?.[0]?.handle?.includes("power") ? "psu" : "case"),
+      productId: product.id,
+      variantId: selectedVariant.id,
+      title: product.title ?? "Component",
+      price: Number(selectedVariant.calculated_price?.calculated_amount ?? 0),
+      currencyCode: selectedVariant.calculated_price?.currency_code ?? "kes",
+    })
+  }
+
   return (
     <>
       <div className="flex flex-col gap-y-2" ref={actionsRef}>
         <div>
-          {(product.variants?.length ?? 0) > 1 && (
+          {(product.options?.length ?? 0) > 0 && (
             <div className="flex flex-col gap-y-4">
               {(product.options || []).map((option) => {
                 return (
@@ -166,6 +192,7 @@ export default function ProductActions({
           onClick={handleAddToCart}
           disabled={
             !inStock ||
+            !hasPrice ||
             !selectedVariant ||
             !!disabled ||
             isAdding ||
@@ -176,11 +203,29 @@ export default function ProductActions({
           isLoading={isAdding}
           data-testid="add-product-button"
         >
-          {!selectedVariant && !options
+          {!selectedVariant && Object.keys(options).length === 0
             ? "Select variant"
             : !inStock || !isValidVariant
             ? "Out of stock"
+            : !hasPrice
+            ? "Price unavailable"
             : "Add to cart"}
+        </Button>
+        <Button
+          onClick={handleBuyNow}
+          disabled={!inStock || !selectedVariant || !!disabled || isAdding || !isValidVariant}
+          variant="secondary"
+          className="h-10 w-full border-orange-500 text-orange-600 hover:bg-orange-50"
+        >
+          Buy now
+        </Button>
+        <Button
+          onClick={handleAddToBuild}
+          disabled={!selectedVariant || !!disabled || !isValidVariant}
+          variant="secondary"
+          className="h-10 w-full border-copper text-copper hover:bg-copper hover:text-pcb"
+        >
+          Add to build
         </Button>
         <MobileActions
           product={product}

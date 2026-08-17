@@ -47,6 +47,15 @@ const AccountNav = ({
               <ul>
                 <li>
                   <LocalizedClientLink
+                    href="/account/builds"
+                    className="flex items-center justify-between py-4 border-b border-gray-200 px-8"
+                  >
+                    <span>Saved builds</span>
+                    <ChevronDown className="transform -rotate-90" />
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
                     href="/account/profile"
                     className="flex items-center justify-between py-4 border-b border-gray-200 px-8"
                     data-testid="profile-link"
@@ -114,6 +123,11 @@ const AccountNav = ({
           </div>
           <div className="text-base-regular">
             <ul className="flex mb-0 justify-start items-start flex-col gap-y-4">
+              <li>
+                <AccountNavLink href="/account/builds" route={route!}>
+                  Saved builds
+                </AccountNavLink>
+              </li>
               <li>
                 <AccountNavLink
                   href="/account"

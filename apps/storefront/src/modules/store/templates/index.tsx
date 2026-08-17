@@ -23,13 +23,14 @@ const StoreTemplate = ({
 
   return (
     <div
-      className="flex flex-col small:flex-row small:items-start py-6 content-container"
+      className="flex w-full flex-col gap-5 pb-24 md:flex-row md:items-start md:gap-6"
       data-testid="category-container"
     >
       <RefinementList sortBy={sort} />
-      <div className="w-full">
-        <div className="mb-8 text-2xl-semi">
-          <h1 data-testid="store-page-title">All products</h1>
+      <div className="min-w-0 w-full px-4 py-6 md:flex-1 md:py-8 md:pr-6 md:pl-0">
+        <div className="mb-5">
+          <p className="mb-1 text-xs font-bold uppercase tracking-wider text-orange-600">Coast Tech catalog</p>
+          <h1 className="text-3xl font-extrabold" data-testid="store-page-title">All products</h1>
         </div>
         <Suspense fallback={<SkeletonProductGrid />}>
           <PaginatedProducts

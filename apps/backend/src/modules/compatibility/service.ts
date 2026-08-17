@@ -1,8 +1,6 @@
 import { MedusaService } from "@medusajs/framework/utils"
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import CompatibilityRule from "./models/compatibility-rule"
 import SpecificationsModuleService from "../specifications/service"
-import { SPECIFICATIONS_MODULE } from "../specifications"
 
 interface CompatibilityResult {
   passed: boolean
@@ -66,7 +64,13 @@ class CompatibilityModuleService extends MedusaService({
   /**
    * Check compatibility between multiple products in a build
    */
-  async checkCompatibility(productIds: string[]): Promise<BuildCompatibilityResult> {
+  async checkCompatibility(
+    productIds: string[],
+    dependencies: {
+      query: { graph: (input: unknown) => Promise<{ data: ProductSummary[] }> }
+      specificationsService: SpecificationsModuleService
+    }
+  ): Promise<BuildCompatibilityResult> {
     const results: CompatibilityResult[] = []
     const warnings: string[] = []
     
@@ -78,9 +82,7 @@ class CompatibilityModuleService extends MedusaService({
       }
     }
     
-    const query = this.__container__[ContainerRegistrationKeys.QUERY]
-    const specificationsService: SpecificationsModuleService =
-      this.__container__[SPECIFICATIONS_MODULE]
+    const { query, specificationsService } = dependencies
 
     // Load products (title + category) once
     const { data: products } = await query.graph({

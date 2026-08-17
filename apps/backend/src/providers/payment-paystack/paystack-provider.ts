@@ -29,6 +29,9 @@ import {
 
 type PaystackOptions = {
   secret_key: string
+  public_key?: string
+  callback_url?: string
+  test_mode?: boolean
   base_url?: string
 }
 
@@ -63,6 +66,12 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
     if (!options?.secret_key) {
       throw new Error("Paystack provider requires `secret_key` option")
     }
+    if (!options?.public_key) {
+      throw new Error("Paystack provider requires `public_key` option")
+    }
+    if (!options?.callback_url) {
+      throw new Error("Paystack provider requires `callback_url` option")
+    }
   }
 
   constructor(container: Record<string, unknown>, options: PaystackOptions) {
@@ -75,7 +84,7 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
     return this.options_.base_url ?? "https://api.paystack.co"
   }
 
-  protected async request<T>(path: string, init: RequestInit & { body?: any } = {}) {
+  protected async request<T>(path: string, init: Omit<RequestInit, "body"> & { body?: unknown } = {}) {
     const res = await fetch(`${this.baseUrl}${path}`, {
       ...init,
       headers: {
@@ -97,7 +106,6 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
   async initiatePayment(input: InitiatePaymentInput): Promise<InitiatePaymentOutput> {
     const email =
       input.context?.customer?.email ??
-      input.context?.email ??
       "customer@example.com"
 
     const currency = input.currency_code?.toUpperCase?.() ?? input.currency_code
@@ -111,6 +119,9 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
           amount: input.amount,
           currency,
           reference: (input.data as any)?.reference,
+          ...(this.options_.callback_url
+            ? { callback_url: this.options_.callback_url }
+            : {}),
         },
       }
     )
@@ -125,19 +136,24 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
         reference: initialize.data.reference,
         authorization_url: initialize.data.authorization_url,
         access_code: initialize.data.access_code,
+        public_key: this.options_.public_key,
+        callback_url: this.options_.callback_url,
+        test_mode: this.options_.test_mode ?? true,
       },
     }
   }
 
   async authorizePayment(input: AuthorizePaymentInput): Promise<AuthorizePaymentOutput> {
+    const status = await this.getPaymentStatus({ data: input.data })
+
     return {
-      status: PaymentSessionStatus.PENDING,
+      status: status.status,
       data: input.data,
     }
   }
 
   async getPaymentStatus(input: GetPaymentStatusInput): Promise<GetPaymentStatusOutput> {
-    const reference = (input.data as any)?.reference ?? input.id
+    const reference = (input.data as any)?.reference
     if (!reference) {
       return { status: PaymentSessionStatus.PENDING }
     }
@@ -176,7 +192,7 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
   }
 
   async refundPayment(input: RefundPaymentInput): Promise<RefundPaymentOutput> {
-    const reference = (input.data as any)?.reference ?? input.payment_id ?? input.id
+    const reference = (input.data as any)?.reference
     if (!reference) {
       return { data: input.data }
     }
@@ -220,14 +236,14 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
     if (event === "charge.success") {
       return {
         action: PaymentActions.SUCCESSFUL,
-        data: { reference },
+        data: { reference } as any,
       }
     }
 
     if (event === "charge.failed") {
       return {
         action: PaymentActions.FAILED,
-        data: { reference },
+        data: { reference } as any,
       }
     }
 
@@ -236,4 +252,3 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
 }
 
 export default PaystackPaymentProvider
-
