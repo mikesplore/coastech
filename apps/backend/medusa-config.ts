@@ -14,6 +14,21 @@ module.exports = defineConfig({
     }
   },
   modules: {
+    payment: {
+      resolve: "@medusajs/payment",
+      options: {
+        providers: [
+          {
+            resolve: "./src/providers/payment-paystack",
+            id: "paystack",
+            options: {
+              secret_key: process.env.PAYSTACK_SECRET_KEY,
+              base_url: process.env.PAYSTACK_BASE_URL,
+            },
+          },
+        ],
+      },
+    },
     specifications: {
       resolve: "./src/modules/specifications",
       definition: {

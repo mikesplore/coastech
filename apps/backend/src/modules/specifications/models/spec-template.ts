@@ -8,6 +8,7 @@ const SpecTemplate = model.define("spec_template", {
   id: model.id().primaryKey(),
   name: model.text(), // e.g., "CPU Template", "Motherboard Template"
   category_id: model.text().nullable(), // Product category ID this template applies to
+  warranty_months: model.number().nullable(), // Optional default warranty for this category
 })
 
 export default SpecTemplate

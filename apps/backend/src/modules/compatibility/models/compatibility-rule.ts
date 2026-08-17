@@ -20,6 +20,15 @@ const CompatibilityRule = model.define("compatibility_rule", {
   // Comparison logic
   operator: model.text(), // equals, in, contains, sum_less_than, sum_greater_than
   error_message: model.text(), // Message shown when rule fails
+
+  /**
+   * Operator-specific configuration.
+   *
+   * Examples:
+   * - Build-level sum checks (PSU wattage vs. CPU+GPU draw)
+   * - Build-level count checks (storage drives vs. motherboard slot counts)
+   */
+  config: model.json().nullable(),
   
   is_active: model.boolean().default(true),
   priority: model.number().default(0), // Higher priority rules are checked first

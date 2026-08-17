@@ -9,6 +9,7 @@ import {
   createApiKeysWorkflow,
   createCollectionsWorkflow,
   createInventoryLevelsWorkflow,
+  createPriceListsWorkflow,
   createProductCategoriesWorkflow,
   createProductsWorkflow,
   createRegionsWorkflow,
@@ -17,6 +18,7 @@ import {
   createShippingProfilesWorkflow,
   createStockLocationsWorkflow,
   createStoresWorkflow,
+  createTaxRatesWorkflow,
   createTaxRegionsWorkflow,
   linkSalesChannelsToApiKeyWorkflow,
   linkSalesChannelsToStockLocationWorkflow,
@@ -35,9 +37,11 @@ export default async function initial_data_seed({
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
   const link = container.resolve(ContainerRegistrationKeys.LINK);
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
+  const productModuleService = container.resolve("product")
   const fulfillmentModuleService = container.resolve(
     ModuleRegistrationName.FULFILLMENT
   );
+  const specificationsModuleService = container.resolve("specifications")
 
   // ---------------------------------------------------------------------------
   // Idempotency check: only run the full store/region/fulfillment setup once.
@@ -140,7 +144,7 @@ export default async function initial_data_seed({
             name: "Kenya",
             currency_code: "kes",
             countries: ["ke"],
-            payment_providers: ["pp_system_default"],
+            payment_providers: ["pp_system_default", "pp_paystack"],
           },
         ],
       },
@@ -152,6 +156,66 @@ export default async function initial_data_seed({
       input: [{ country_code: "ke", provider_id: "tp_system" }],
     });
     logger.info("Finished seeding tax regions.");
+
+    logger.info("Seeding tax rates...")
+    const { data: keTaxRegions } = await query.graph({
+      entity: "tax_region",
+      fields: ["id", "country_code"],
+      filters: { country_code: "ke" },
+    })
+    const keTaxRegionId = keTaxRegions[0]?.id
+    if (keTaxRegionId) {
+      const { data: existingRates } = await query.graph({
+        entity: "tax_rate",
+        fields: ["id", "code", "tax_region_id"],
+        filters: { tax_region_id: keTaxRegionId },
+      })
+
+      const hasVat = existingRates.some((r) => r.code === "VAT")
+      if (!hasVat) {
+        await createTaxRatesWorkflow(container).run({
+          input: [
+            {
+              tax_region_id: keTaxRegionId,
+              name: "VAT",
+              code: "VAT",
+              rate: 0.16,
+              is_default: true,
+              is_combinable: false,
+            },
+          ],
+        })
+      }
+    }
+    logger.info("Finished seeding tax rates.")
+
+    logger.info("Seeding price lists...")
+    const { data: existingPriceLists } = await query.graph({
+      entity: "price_list",
+      fields: ["id", "title"],
+    })
+    const existingPriceListTitles = new Set(existingPriceLists.map((p) => p.title))
+    const priceListsToCreate = [
+      {
+        title: "Retail",
+        description: "Default retail pricing",
+        status: "active",
+      },
+      {
+        title: "Trade",
+        description: "Discounted pricing for bulk/trade buyers",
+        status: "draft",
+      },
+    ].filter((p) => !existingPriceListTitles.has(p.title))
+
+    if (priceListsToCreate.length > 0) {
+      await createPriceListsWorkflow(container).run({
+        input: {
+          price_lists_data: priceListsToCreate as any,
+        },
+      })
+    }
+    logger.info("Finished seeding price lists.")
 
     logger.info("Seeding stock location data...");
     const { result: stockLocationResult } = await createStockLocationsWorkflow(
@@ -434,6 +498,164 @@ export default async function initial_data_seed({
 
   const componentsCollectionId = getCollectionId("components");
 
+  // ---------------------------------------------------------------------------
+  // Product tags (cross-cutting labels).
+  // ---------------------------------------------------------------------------
+  logger.info("Seeding product tags...")
+  const desiredTags = ["gaming", "refurbished", "clearance", "office"]
+
+  const { data: existingTags } = await query.graph({
+    entity: "product_tag",
+    fields: ["id", "value"],
+  })
+  const tagIdByValue = new Map(existingTags.map((t) => [t.value, t.id]))
+
+  const tagsToCreate = desiredTags.filter((t) => !tagIdByValue.has(t))
+  if (tagsToCreate.length > 0) {
+    const createdTags = await productModuleService.createProductTags(
+      tagsToCreate.map((value) => ({ value }))
+    )
+    createdTags.forEach((t) => tagIdByValue.set(t.value, t.id))
+  }
+  logger.info("Finished seeding product tags.")
+
+  // ---------------------------------------------------------------------------
+  // Specifications templates/fields (Phase 3) - category-validated, filterable specs.
+  // ---------------------------------------------------------------------------
+  logger.info("Seeding specification templates and fields...")
+
+  const specTemplates = [
+    {
+      key: "cpu",
+      name: "CPU Template",
+      category_handle: "processors-cpus",
+      warranty_months: 36,
+      fields: [
+        { name: "socket", label: "Socket", data_type: "string", is_required: true, is_filterable: true, sort_order: 10 },
+        { name: "cores", label: "Cores", data_type: "number", is_required: true, is_filterable: true, sort_order: 20 },
+        { name: "threads", label: "Threads", data_type: "number", is_required: true, is_filterable: true, sort_order: 30 },
+        { name: "tdp_watts", label: "TDP (W)", data_type: "number", unit: "W", is_required: true, is_filterable: true, sort_order: 40 },
+        { name: "integrated_graphics", label: "Integrated Graphics", data_type: "boolean", is_required: false, is_filterable: true, sort_order: 50 },
+      ],
+    },
+    {
+      key: "motherboard",
+      name: "Motherboard Template",
+      category_handle: "motherboards",
+      warranty_months: 24,
+      fields: [
+        { name: "socket", label: "Socket", data_type: "string", is_required: true, is_filterable: true, sort_order: 10 },
+        { name: "form_factor", label: "Form Factor", data_type: "string", is_required: true, is_filterable: true, sort_order: 20 },
+        { name: "supported_ram_types", label: "Supported RAM Types", data_type: "string", is_required: true, is_filterable: true, sort_order: 30 },
+        { name: "ram_slots", label: "RAM Slots", data_type: "number", is_required: false, is_filterable: true, sort_order: 40 },
+        { name: "m2_slots", label: "M.2 Slots", data_type: "number", is_required: false, is_filterable: true, sort_order: 50 },
+        { name: "sata_ports", label: "SATA Ports", data_type: "number", is_required: false, is_filterable: true, sort_order: 60 },
+      ],
+    },
+    {
+      key: "ram",
+      name: "RAM Template",
+      category_handle: "memory-ram",
+      warranty_months: 24,
+      fields: [
+        { name: "type", label: "Type", data_type: "string", is_required: true, is_filterable: true, sort_order: 10 },
+        { name: "capacity_gb", label: "Capacity (GB)", data_type: "number", unit: "GB", is_required: true, is_filterable: true, sort_order: 20 },
+        { name: "speed_mhz", label: "Speed (MHz)", data_type: "number", unit: "MHz", is_required: false, is_filterable: true, sort_order: 30 },
+      ],
+    },
+    {
+      key: "gpu",
+      name: "GPU Template",
+      category_handle: "graphics-cards-gpus",
+      warranty_months: 24,
+      fields: [
+        { name: "tdp_watts", label: "TDP (W)", data_type: "number", unit: "W", is_required: true, is_filterable: true, sort_order: 10 },
+        { name: "length_mm", label: "Length (mm)", data_type: "number", unit: "mm", is_required: false, is_filterable: true, sort_order: 20 },
+      ],
+    },
+    {
+      key: "psu",
+      name: "Power Supply Template",
+      category_handle: "power-supplies-psus",
+      warranty_months: 60,
+      fields: [
+        { name: "wattage", label: "Wattage (W)", data_type: "number", unit: "W", is_required: true, is_filterable: true, sort_order: 10 },
+      ],
+    },
+    {
+      key: "case",
+      name: "Case Template",
+      category_handle: "cases",
+      warranty_months: 12,
+      fields: [
+        { name: "form_factors_supported", label: "Supported Form Factors", data_type: "string", is_required: true, is_filterable: true, sort_order: 10 },
+        { name: "max_gpu_length_mm", label: "Max GPU Length (mm)", data_type: "number", unit: "mm", is_required: false, is_filterable: true, sort_order: 20 },
+      ],
+    },
+    {
+      key: "storage",
+      name: "Storage Template",
+      category_handle: "storage",
+      warranty_months: 60,
+      fields: [
+        { name: "type", label: "Type", data_type: "string", is_required: true, is_filterable: true, sort_order: 10 },
+        { name: "interface", label: "Interface", data_type: "string", is_required: false, is_filterable: true, sort_order: 20 },
+      ],
+    },
+  ] as const
+
+  const specTemplateIdByKey = new Map<string, string>()
+  const specFieldIdByTemplateKeyAndName = new Map<string, Map<string, string>>()
+
+  for (const tpl of specTemplates) {
+    const categoryId = getCategoryId(tpl.category_handle)
+
+    const existing = await specificationsModuleService.listSpecTemplates({
+      category_id: categoryId,
+    })
+
+    const template =
+      existing[0] ??
+      (
+        await specificationsModuleService.createSpecTemplates([
+          {
+            name: tpl.name,
+            category_id: categoryId,
+            warranty_months: (tpl as any).warranty_months ?? null,
+          },
+        ])
+      )[0]
+
+    specTemplateIdByKey.set(tpl.key, template.id)
+
+    const existingFields = await specificationsModuleService.listSpecTemplateFields({
+      template_id: template.id,
+    })
+    const fieldIdByName = new Map(existingFields.map((f) => [f.name, f.id]))
+    const missingFields = tpl.fields.filter((f) => !fieldIdByName.has(f.name))
+
+    if (missingFields.length > 0) {
+      const created = await specificationsModuleService.createSpecTemplateFields(
+        missingFields.map((f) => ({
+          template_id: template.id,
+          name: f.name,
+          label: f.label,
+          data_type: f.data_type,
+          unit: (f as any).unit ?? null,
+          enum_values: null,
+          is_filterable: f.is_filterable ?? false,
+          is_required: f.is_required ?? false,
+          sort_order: f.sort_order ?? 0,
+        }))
+      )
+      created.forEach((f) => fieldIdByName.set(f.name, f.id))
+    }
+
+    specFieldIdByTemplateKeyAndName.set(tpl.key, fieldIdByName)
+  }
+
+  logger.info("Finished seeding specification templates and fields.")
+
   const products = [
     {
       title: "AMD Ryzen 7 7800X3D",
@@ -652,6 +874,40 @@ export default async function initial_data_seed({
         warranty_years: 5,
       },
     },
+    {
+      title: "Mechanical Keyboard (RGB)",
+      category_handle: "keyboards",
+      description: "Mechanical keyboard with per-key RGB and hot-swappable switches.",
+      handle: "mechanical-keyboard-rgb",
+      weight: 900,
+      sku: "KB-MECH-RGB",
+      price: 8999,
+      tag_values: ["gaming"],
+      metadata: {
+        // This product intentionally uses purchasable variants (switch type)
+        // rather than encoding everything into specs.
+      },
+      options: [
+        {
+          title: "Switch",
+          values: ["Red", "Brown"],
+        },
+      ],
+      variants: [
+        {
+          title: "Red Switch",
+          sku: "KB-MECH-RGB-RED",
+          options: { Switch: "Red" },
+          price: 8999,
+        },
+        {
+          title: "Brown Switch",
+          sku: "KB-MECH-RGB-BROWN",
+          options: { Switch: "Brown" },
+          price: 8999,
+        },
+      ],
+    },
   ];
 
   const productsToCreate = products.filter((p) => !productHandles.has(p.handle));
@@ -661,12 +917,14 @@ export default async function initial_data_seed({
       input: {
         products: productsToCreate.map((p) => ({
           title: p.title,
-          options: [
-            {
-              title: "Default",
-              values: ["Default"],
-            },
-          ],
+          options:
+            (p as any).options ??
+            [
+              {
+                title: "Default",
+                values: ["Default"],
+              },
+            ],
           category_ids: [getCategoryId(p.category_handle)],
           collection_id: componentsCollectionId,
           description: p.description,
@@ -678,27 +936,50 @@ export default async function initial_data_seed({
               url: `https://example.com/images/${p.handle}.png`,
             },
           ],
-          variants: [
-            {
-              title: "Default",
-              sku: p.sku,
-              options: {
-                Default: "Default",
+          variants:
+            (p as any).variants?.map((v) => ({
+              title: v.title,
+              sku: v.sku,
+              options: v.options,
+              metadata: {
+                low_stock_threshold: 5,
               },
               prices: [
                 {
-                  amount: p.price,
+                  amount: v.price,
                   currency_code: "kes",
                 },
               ],
-            },
-          ],
+            })) ??
+            [
+              {
+                title: "Default",
+                sku: p.sku,
+                options: {
+                  Default: "Default",
+                },
+                metadata: {
+                  low_stock_threshold: 5,
+                },
+                prices: [
+                  {
+                    amount: p.price,
+                    currency_code: "kes",
+                  },
+                ],
+              },
+            ],
           sales_channels: defaultSalesChannel
             ? [
                 {
                   id: defaultSalesChannel.id,
                 },
               ]
+            : undefined,
+          tag_ids: (p as any).tag_values
+            ? (p as any).tag_values
+                .map((v: string) => tagIdByValue.get(v))
+                .filter(Boolean)
             : undefined,
           metadata: p.metadata,
         })),
@@ -708,6 +989,199 @@ export default async function initial_data_seed({
   logger.info(
     `Finished seeding product data. Created ${productsToCreate.length} products.`
   );
+
+  // ---------------------------------------------------------------------------
+  // Specifications values (Phase 3) - map seeded product metadata to structured values.
+  // ---------------------------------------------------------------------------
+  logger.info("Seeding product specification values...")
+
+  const handlesToSeedSpecs = products.map((p) => p.handle)
+  const { data: productsForSpecs } = await query.graph({
+    entity: "product",
+    fields: ["id", "handle", "metadata"],
+    filters: { handle: handlesToSeedSpecs },
+  })
+  const productIdByHandle = new Map(productsForSpecs.map((p) => [p.handle, p.id]))
+
+  for (const p of products) {
+    const productId = productIdByHandle.get(p.handle)
+    if (!productId) continue
+
+    const templateKey = (p.metadata as any)?.spec_template as string | undefined
+    if (!templateKey || !specFieldIdByTemplateKeyAndName.has(templateKey)) continue
+
+    const existingValues = await specificationsModuleService.listProductSpecValues({
+      product_id: productId,
+    })
+    const existingFieldIds = new Set(existingValues.map((v) => v.field_id))
+
+    const fieldIdByName = specFieldIdByTemplateKeyAndName.get(templateKey)!
+    const valuesToCreate: any[] = []
+
+    for (const [name, fieldId] of fieldIdByName.entries()) {
+      if (existingFieldIds.has(fieldId)) continue
+      const rawValue = (p.metadata as any)?.[name]
+      if (rawValue === undefined || rawValue === null) continue
+
+      if (typeof rawValue === "number") {
+        valuesToCreate.push({
+          product_id: productId,
+          field_id: fieldId,
+          value_number: rawValue,
+        })
+        continue
+      }
+
+      if (typeof rawValue === "boolean") {
+        valuesToCreate.push({
+          product_id: productId,
+          field_id: fieldId,
+          value_boolean: rawValue,
+        })
+        continue
+      }
+
+      if (Array.isArray(rawValue)) {
+        valuesToCreate.push({
+          product_id: productId,
+          field_id: fieldId,
+          value_text: JSON.stringify(rawValue),
+        })
+        continue
+      }
+
+      valuesToCreate.push({
+        product_id: productId,
+        field_id: fieldId,
+        value_text: String(rawValue),
+      })
+    }
+
+    if (valuesToCreate.length > 0) {
+      await specificationsModuleService.createProductSpecValues(valuesToCreate)
+    }
+  }
+
+  logger.info("Finished seeding product specification values.")
+
+  // ---------------------------------------------------------------------------
+  // Compatibility rules (Phase 5) - seed initial v1 rule set.
+  // ---------------------------------------------------------------------------
+  logger.info("Seeding compatibility rules...")
+  const compatibilityModuleService = container.resolve("compatibility")
+
+  const existingRules = await compatibilityModuleService.listCompatibilityRules()
+  const existingRuleNames = new Set(existingRules.map((r) => r.name))
+
+  const cpuCategoryId = getCategoryId("processors-cpus")
+  const motherboardCategoryId = getCategoryId("motherboards")
+  const ramCategoryId = getCategoryId("memory-ram")
+  const gpuCategoryId = getCategoryId("graphics-cards-gpus")
+  const psuCategoryId = getCategoryId("power-supplies-psus")
+  const caseCategoryId = getCategoryId("cases")
+  const storageCategoryId = getCategoryId("storage")
+
+  const rulesToSeed = [
+    {
+      name: "CPU ↔ Motherboard Socket Match",
+      description: "CPU socket must match motherboard socket.",
+      source_category_id: cpuCategoryId,
+      source_field_name: "socket",
+      target_category_id: motherboardCategoryId,
+      target_field_name: "socket",
+      operator: "equals",
+      error_message: "CPU socket must match motherboard socket",
+      priority: 100,
+    },
+    {
+      name: "RAM ↔ Motherboard RAM Type Supported",
+      description: "RAM type must be supported by the motherboard.",
+      source_category_id: ramCategoryId,
+      source_field_name: "type",
+      target_category_id: motherboardCategoryId,
+      target_field_name: "supported_ram_types",
+      operator: "in",
+      error_message: "RAM type must be supported by the motherboard",
+      priority: 90,
+    },
+    {
+      name: "Motherboard ↔ Case Form Factor Fit",
+      description: "Motherboard form factor must be supported by the case.",
+      source_category_id: motherboardCategoryId,
+      source_field_name: "form_factor",
+      target_category_id: caseCategoryId,
+      target_field_name: "form_factors_supported",
+      operator: "in",
+      error_message: "Motherboard form factor must be supported by the case",
+      priority: 80,
+    },
+    {
+      name: "GPU ↔ Case Length Fit",
+      description: "GPU length must not exceed case maximum GPU length.",
+      source_category_id: gpuCategoryId,
+      source_field_name: "length_mm",
+      target_category_id: caseCategoryId,
+      target_field_name: "max_gpu_length_mm",
+      operator: "less_than_equal",
+      error_message: "GPU length must be within the case maximum GPU length",
+      priority: 70,
+    },
+    {
+      name: "PSU Wattage vs. CPU+GPU Draw",
+      description: "PSU wattage should cover CPU+GPU draw with headroom.",
+      source_category_id: psuCategoryId,
+      source_field_name: "wattage",
+      target_category_id: psuCategoryId,
+      target_field_name: "wattage",
+      operator: "sum_less_than",
+      error_message: "PSU wattage is too low for the selected components",
+      config: {
+        mode: "sum",
+        headroom_percent: 25,
+        sum: {
+          category_ids: [cpuCategoryId, gpuCategoryId],
+          field_name: "tdp_watts",
+        },
+        target: {
+          category_id: psuCategoryId,
+          field_name: "wattage",
+        },
+      },
+      priority: 60,
+    },
+    {
+      name: "NVMe Drives vs. M.2 Slots",
+      description: "Number of NVMe drives should not exceed motherboard M.2 slots.",
+      source_category_id: storageCategoryId,
+      source_field_name: "type",
+      target_category_id: motherboardCategoryId,
+      target_field_name: "m2_slots",
+      operator: "sum_less_than",
+      error_message: "Not enough M.2 slots for the selected NVMe drives",
+      config: {
+        mode: "count",
+        count: {
+          category_ids: [storageCategoryId],
+          field_name: "type",
+          includes: "NVMe",
+        },
+        target: {
+          category_id: motherboardCategoryId,
+          field_name: "m2_slots",
+        },
+      },
+      priority: 50,
+    },
+  ]
+
+  const rulesToCreate = rulesToSeed.filter((r) => !existingRuleNames.has(r.name))
+  if (rulesToCreate.length > 0) {
+    await compatibilityModuleService.createCompatibilityRules(rulesToCreate)
+    logger.info(`Created ${rulesToCreate.length} compatibility rules.`)
+  } else {
+    logger.info("Compatibility rules already exist - skipping.")
+  }
+  logger.info("Finished seeding compatibility rules.")
 
   // ---------------------------------------------------------------------------
   // Inventory levels (only for the products we just created).

@@ -1,6 +1,8 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
 import CompatibilityModuleService from "../../../../modules/compatibility/service"
 import { COMPATIBILITY_MODULE } from "../../../../modules/compatibility"
+import { deleteCompatibilityRulesWorkflow } from "../../../../workflows/compatibility-rules/delete-compatibility-rules"
+import { updateCompatibilityRulesWorkflow } from "../../../../workflows/compatibility-rules/update-compatibility-rules"
 
 /**
  * GET /admin/compatibility-rules/:id
@@ -41,9 +43,11 @@ export async function POST(
   )
 
   try {
-    const rule = await compatibilityService.updateCompatibilityRules({
-      id: req.params.id,
-      ...(req.body as Record<string, unknown>),
+    const { result: rule } = await updateCompatibilityRulesWorkflow(req.scope).run({
+      input: {
+        id: req.params.id,
+        ...(req.body as Record<string, unknown>),
+      },
     })
 
     res.json({
@@ -70,8 +74,10 @@ export async function DELETE(
   )
 
   try {
-    await compatibilityService.deleteCompatibilityRules({
-      id: req.params.id,
+    await deleteCompatibilityRulesWorkflow(req.scope).run({
+      input: {
+        id: req.params.id,
+      },
     })
 
     res.json({
