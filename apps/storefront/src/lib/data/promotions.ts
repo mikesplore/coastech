@@ -13,6 +13,13 @@ export type PromotionalAd = {
   cta_label?: string | null
   discount_label?: string | null
   countdown_ends_at?: string | null
+  starts_at?: string | null
+  ends_at?: string | null
+  priority?: number
+  is_active?: boolean
+  target_type?: string
+  target_id?: string | null
+  metadata?: Record<string, unknown> | null
 }
 
 export async function listPromotionalAds(): Promise<PromotionalAd[]> {

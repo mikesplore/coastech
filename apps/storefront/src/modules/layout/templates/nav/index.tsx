@@ -5,9 +5,13 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import CartButton from "@modules/layout/components/cart-button"
 import SearchBar from "@modules/layout/components/search-bar"
 import { listPromotionalAds } from "@lib/data/promotions"
+import { listLocales } from "@lib/data/locales"
+import { listRegions } from "@lib/data/regions"
+import SideMenu from "@modules/layout/components/side-menu"
 
 export default async function Nav() {
-  const trustMessages = (await listPromotionalAds()).filter((ad) => ad.placement === "homepage_trust").map((ad) => ad.title)
+  const [ads, regions, locales] = await Promise.all([listPromotionalAds(), listRegions(), listLocales()])
+  const trustMessages = ads.filter((ad) => ad.placement === "homepage_trust").map((ad) => ad.title)
   const trustText = trustMessages.join(" · ")
 
   return (
@@ -16,11 +20,7 @@ export default async function Nav() {
     <header className="flex h-16 w-full items-center justify-between border-b border-surface-variant bg-surface/95 px-margin-mobile backdrop-blur-md">
       <div className="flex items-center gap-4">
         <span className="hidden rounded bg-surface-container px-2 py-1 font-label-sm text-label-sm text-secondary md:inline-flex">Kenya · KES</span>
-        <span aria-hidden="true" className="grid h-8 w-8 place-items-center text-primary">
-          <svg viewBox="0 0 24 24" className="h-6 w-6 fill-none stroke-current" strokeWidth="2">
-            <path d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </span>
+        <SideMenu regions={regions} locales={locales} currentLocale={null} />
         <LocalizedClientLink
           href="/"
           className="font-headline-lg text-headline-lg font-extrabold tracking-tighter text-on-surface"

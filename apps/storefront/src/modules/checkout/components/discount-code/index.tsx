@@ -9,6 +9,7 @@ import { HttpTypes } from "@medusajs/types"
 import Trash from "@modules/common/icons/trash"
 import ErrorMessage from "../error-message"
 import { SubmitButton } from "../submit-button"
+import { useRouter } from "next/navigation"
 
 type DiscountCodeProps = {
   cart: HttpTypes.StoreCart
@@ -17,6 +18,7 @@ type DiscountCodeProps = {
 const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const [isOpen, setIsOpen] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState("")
+  const router = useRouter()
 
   const { promotions = [] } = cart
   const removePromotionCode = async (code: string) => {
@@ -32,7 +34,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const addPromotionCode = async (formData: FormData) => {
     setErrorMessage("")
 
-    const code = formData.get("code")
+    const code = formData.get("code")?.toString().trim()
     if (!code) {
       return
     }
@@ -40,15 +42,18 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
     const codes = promotions
       .filter((p) => p.code !== undefined)
       .map((p) => p.code!)
-    codes.push(code.toString())
+    codes.push(code.toUpperCase())
 
+    let applied = false
     try {
       await applyPromotions(codes)
+      router.refresh()
+      applied = true
     } catch (e) {
       setErrorMessage(e instanceof Error ? e.message : String(e))
     }
 
-    if (input) {
+    if (input && applied) {
       input.value = ""
     }
   }
@@ -56,7 +61,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   return (
     <div className="w-full bg-white flex flex-col">
       <div className="txt-medium">
-        <form action={(a) => addPromotionCode(a)} className="w-full mb-5">
+        <form onSubmit={(event) => { event.preventDefault(); void addPromotionCode(new FormData(event.currentTarget)) }} className="w-full mb-5">
           <Label className="flex gap-x-1 my-2 items-center">
             <button
               onClick={() => setIsOpen(!isOpen)}

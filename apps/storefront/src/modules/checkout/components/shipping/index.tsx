@@ -101,7 +101,11 @@ const Shipping: React.FC<ShippingProps> = ({
           setCalculatedPricesMap(pricesMap)
           setIsLoadingPrices(false)
         })
+      } else {
+        setIsLoadingPrices(false)
       }
+    } else {
+      setIsLoadingPrices(false)
     }
 
     if (_pickupMethods?.find((m) => m.id === shippingMethodId)) {
@@ -235,7 +239,7 @@ const Shipping: React.FC<ShippingProps> = ({
                     </Radio>
                   </RadioGroup>
                 )}
-                <RadioGroup
+                {_shippingMethods?.length || _pickupMethods?.length ? <RadioGroup
                   value={shippingMethodId}
                   onChange={(v) => {
                     if (v) {
@@ -293,7 +297,7 @@ const Shipping: React.FC<ShippingProps> = ({
                       </Radio>
                     )
                   })}
-                </RadioGroup>
+                </RadioGroup> : <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" data-testid="no-shipping-methods-message">No shipping methods are available for this order and address. Please contact us if you need help arranging delivery.</div>}
               </div>
             </div>
           </div>

@@ -15,6 +15,12 @@ const databaseUrl = process.env.DATABASE_URL || [
   process.env.DB_NAME || "medusa-backend",
 ].join("")
 
+const cloudinaryConfigured = Boolean(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+)
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl,
@@ -28,6 +34,27 @@ module.exports = defineConfig({
     }
   },
   modules: {
+    ...(cloudinaryConfigured
+      ? {
+          file: {
+            resolve: "@medusajs/medusa/file",
+            options: {
+              providers: [
+                {
+                  resolve: "./src/providers/file-cloudinary",
+                  id: "cloudinary",
+                  options: {
+                    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+                    api_key: process.env.CLOUDINARY_API_KEY,
+                    api_secret: process.env.CLOUDINARY_API_SECRET,
+                    folder: process.env.CLOUDINARY_FOLDER ?? "coastech/products",
+                  },
+                },
+              ],
+            },
+          },
+        }
+      : {}),
     payment: {
       resolve: "@medusajs/payment",
       options: {

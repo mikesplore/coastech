@@ -83,6 +83,21 @@ npm run ingest:hardware
 
 Use `HARDWARE_INGEST_SOURCE_URL` to bypass search discovery. A price override is recommended when the source page does not expose a USD offer. The command is idempotent for an existing handle or source URL and refuses to persist local image paths or non-public file-provider URLs.
 
+## Production image storage
+
+When `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` are configured, Medusa uses the Cloudinary File Module Provider. Admin uploads and the existing hardware ingestion path both upload through Medusa's normal file workflow, while products store the returned public Cloudinary URL.
+
+Deleting a product through the admin API removes its Cloudinary images first. If Cloudinary cleanup fails, the product deletion is stopped so the image is not silently orphaned.
+
+For existing products whose images are missing, run the local image sync after deploying an image that contains the `static` directory:
+
+```bash
+cd apps/backend
+npm run hardware:sync-local-images
+```
+
+It is dry-run by default. Set `HARDWARE_LOCAL_IMAGES_DRY_RUN=false` only after reviewing the matches. Local development remains on Medusa's default provider when Cloudinary credentials are absent.
+
 ## What is Medusa
 
 Medusa is a set of commerce modules and tools that allow you to build rich, reliable, and performant commerce applications without reinventing core commerce logic. The modules can be customized and used to build advanced ecommerce stores, marketplaces, or any product that needs foundational commerce primitives. All modules are open-source and freely available on npm.
