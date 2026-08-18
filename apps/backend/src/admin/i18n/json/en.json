@@ -1,0 +1,26 @@
+{
+  "products": {
+    "fields": {
+      "title": {
+        "placeholder": "Business laptop"
+      },
+      "subtitle": {
+        "placeholder": "16 GB RAM · 512 GB SSD"
+      },
+      "handle": {
+        "placeholder": "business-laptop"
+      },
+      "description": {
+        "placeholder": "A reliable laptop for work, study, and everyday computing"
+      },
+      "material": {
+        "label": "Chassis material"
+      },
+      "options": {
+        "hint": "Options are used to define the memory, storage, processor, or other configuration of the product",
+        "optionTitlePlaceholder": "RAM",
+        "variantionsPlaceholder": "8 GB, 16 GB, 32 GB"
+      }
+    }
+  }
+}
