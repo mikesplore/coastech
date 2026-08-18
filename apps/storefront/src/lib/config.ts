@@ -16,6 +16,12 @@ export const sdk = new Medusa({
 
 const originalFetch = sdk.client.fetch.bind(sdk.client)
 
+const disableStorefrontCache = process.env.STOREFRONT_DISABLE_CACHE === "true"
+const configuredCacheTtl = Number(process.env.STOREFRONT_CACHE_TTL_SECONDS)
+const storefrontCacheTtl = Number.isFinite(configuredCacheTtl) && configuredCacheTtl > 0
+  ? configuredCacheTtl
+  : undefined
+
 sdk.client.fetch = async <T>(
   input: FetchInput,
   init?: FetchArgs
@@ -35,5 +41,22 @@ sdk.client.fetch = async <T>(
     ...init,
     headers: newHeaders,
   }
+
+  if (disableStorefrontCache) {
+    init = {
+      ...init,
+      cache: "no-store",
+      next: undefined,
+    } as FetchArgs
+  } else if (storefrontCacheTtl) {
+    init = {
+      ...init,
+      next: {
+        ...((init as FetchArgs & { next?: Record<string, unknown> }).next ?? {}),
+        revalidate: storefrontCacheTtl,
+      },
+    } as FetchArgs
+  }
+
   return originalFetch(input, init)
 }
