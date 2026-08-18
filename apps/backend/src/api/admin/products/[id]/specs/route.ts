@@ -135,10 +135,11 @@ export async function POST(req: MedusaRequest, res: MedusaResponse): Promise<voi
     },
   })
 
-  if (!result.ok) {
+  const validationResult = result as { ok: boolean; errors?: string[] }
+  if (!validationResult.ok) {
     res.status(400).json({
       message: "Invalid specification values",
-      errors: result.errors,
+      errors: validationResult.errors,
     })
     return
   }

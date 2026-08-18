@@ -185,7 +185,6 @@ export default async function initial_data_seed({
               code: "VAT",
               rate: 0.16,
               is_default: true,
-              is_combinable: false,
             },
           ],
         })

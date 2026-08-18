@@ -440,7 +440,7 @@ async function ingestEntries(container: MedusaContainer, entries: CatalogEntry[]
     totalProducts = products.length
   }
   for (const entry of entries) {
-    if (totalProducts !== undefined && totalProducts >= targetProductCount) break
+    if (targetProductCount !== undefined && totalProducts !== undefined && totalProducts >= targetProductCount) break
     try {
       const outcome = await ingestOne(container, entry, mapping, logger)
       if (outcome === "created") created += 1

@@ -13,8 +13,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
     productIds.length ? query.graph({ entity: "product", fields: ["id", "handle"], filters: { id: productIds } }) : { data: [] },
     categoryIds.length ? query.graph({ entity: "product_category", fields: ["id", "handle"], filters: { id: categoryIds } }) : { data: [] },
   ])
-  const productHandles = new Map(products.map((product) => [product.id, product.handle]))
-  const categoryHandles = new Map(categories.map((category) => [category.id, category.handle]))
+  const productHandles = new Map<string, string>(products.map((product) => [product.id, product.handle] as [string, string]))
+  const categoryHandles = new Map<string, string>(categories.map((category) => [category.id, category.handle] as [string, string]))
   const resolvedAds = ads.map((ad) => ({
     ...ad,
     href: ad.target_type === "product" && ad.target_id && productHandles.get(ad.target_id)

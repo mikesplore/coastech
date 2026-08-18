@@ -37,6 +37,9 @@ const Payment = ({
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
     activeSession?.provider_id ?? ""
   )
+  const [initializedPaymentMethod, setInitializedPaymentMethod] = useState(
+    activeSession?.provider_id ?? ""
+  )
 
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -47,10 +50,13 @@ const Payment = ({
   const setPaymentMethod = async (method: string) => {
     setError(null)
     setSelectedPaymentMethod(method)
-    if (isStripeLike(method) || isPaystack(method)) {
+    const alreadyInitialized =
+      activeSession?.provider_id === method && activeSession.status === "pending"
+    if ((isStripeLike(method) || isPaystack(method)) && !alreadyInitialized) {
       await initiatePaymentSession(cart, {
         provider_id: method,
       })
+      setInitializedPaymentMethod(method)
     }
   }
 
@@ -84,7 +90,8 @@ const Payment = ({
         isStripeLike(selectedPaymentMethod) && !activeSession
 
       const checkActiveSession =
-        activeSession?.provider_id === selectedPaymentMethod
+        activeSession?.provider_id === selectedPaymentMethod ||
+        initializedPaymentMethod === selectedPaymentMethod
 
       if (!checkActiveSession) {
         await initiatePaymentSession(cart, {

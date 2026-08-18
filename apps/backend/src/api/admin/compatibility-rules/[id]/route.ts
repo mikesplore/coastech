@@ -47,7 +47,7 @@ export async function POST(
       input: {
         id: req.params.id,
         ...(req.body as Record<string, unknown>),
-      },
+      } as any,
     })
 
     res.json({

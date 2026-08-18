@@ -54,7 +54,26 @@ type PaystackVerifyResponse = {
     amount: number
     currency: string
     paid_at?: string
+    metadata?: Record<string, unknown>
   }
+}
+
+function toMinorUnits(amount: unknown, currencyCode?: string) {
+  const amountValue =
+    typeof amount === "object" && amount !== null
+      ? (amount as { value?: unknown; numeric?: unknown }).value ??
+        (amount as { value?: unknown; numeric?: unknown }).numeric ??
+        amount
+      : amount
+  const numericAmount = Number(amountValue)
+  if (!Number.isFinite(numericAmount)) {
+    return 0
+  }
+
+  const zeroDecimalCurrencies = new Set(["jpy", "krw", "vnd"])
+  return Math.round(
+    numericAmount * (zeroDecimalCurrencies.has(currencyCode?.toLowerCase() ?? "") ? 1 : 100)
+  )
 }
 
 class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
@@ -109,6 +128,9 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
       "customer@example.com"
 
     const currency = input.currency_code?.toUpperCase?.() ?? input.currency_code
+    const existingReference = (input.data as Record<string, unknown> | undefined)?.reference
+    const reference = existingReference || `coastech_${crypto.randomUUID()}`
+    const amountMinor = toMinorUnits(input.amount, input.currency_code)
 
     const initialize = await this.request<PaystackInitializeResponse>(
       "/transaction/initialize",
@@ -116,9 +138,9 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
         method: "POST",
         body: {
           email,
-          amount: input.amount,
+          amount: amountMinor,
           currency,
-          reference: (input.data as any)?.reference,
+          reference,
           ...(this.options_.callback_url
             ? { callback_url: this.options_.callback_url }
             : {}),
@@ -134,6 +156,8 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
       id: initialize.data.reference,
       data: {
         reference: initialize.data.reference,
+        amount_minor: amountMinor,
+        currency_code: input.currency_code,
         authorization_url: initialize.data.authorization_url,
         access_code: initialize.data.access_code,
         public_key: this.options_.public_key,
@@ -153,7 +177,8 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
   }
 
   async getPaymentStatus(input: GetPaymentStatusInput): Promise<GetPaymentStatusOutput> {
-    const reference = (input.data as any)?.reference
+    const data = (input.data ?? {}) as Record<string, unknown>
+    const reference = data.reference
     if (!reference) {
       return { status: PaymentSessionStatus.PENDING }
     }
@@ -164,6 +189,16 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
     )
 
     const status = verify.data?.status
+    const expectedAmount = data.amount_minor
+    const expectedCurrency = String(data.currency_code ?? "").toUpperCase()
+    if (
+      status === "success" &&
+      expectedAmount !== undefined &&
+      (verify.data?.amount !== Number(expectedAmount) ||
+        verify.data?.currency?.toUpperCase() !== expectedCurrency)
+    ) {
+      return { status: PaymentSessionStatus.ERROR }
+    }
     if (status === "success") {
       return { status: PaymentSessionStatus.AUTHORIZED }
     }
@@ -201,7 +236,7 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
       method: "POST",
       body: {
         transaction: reference,
-        amount: input.amount,
+        amount: toMinorUnits(input.amount, (input.data as Record<string, unknown> | undefined)?.currency_code as string | undefined),
       },
     })
 
@@ -221,7 +256,10 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
       .update(payload.rawData)
       .digest("hex")
 
-    if (!signature || signature !== expected) {
+    const signaturesMatch =
+      signature.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
+    if (!signaturesMatch) {
       return { action: PaymentActions.NOT_SUPPORTED }
     }
 

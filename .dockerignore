@@ -1,0 +1,12 @@
+**/node_modules
+**/.next
+**/.turbo
+**/.medusa
+**/dist
+**/out
+**/.env
+**/.env.*
+!**/.env.template
+.git
+coverage
+*.log

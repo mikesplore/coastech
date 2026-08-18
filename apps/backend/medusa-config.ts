@@ -2,9 +2,23 @@ import { loadEnv, defineConfig } from '@medusajs/framework/utils'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
+const databaseUrl = process.env.DATABASE_URL || [
+  "postgres://",
+  encodeURIComponent(process.env.DB_USER || "postgres"),
+  ":",
+  encodeURIComponent(process.env.DB_PASSWORD || ""),
+  "@",
+  process.env.DB_HOST || "localhost",
+  ":",
+  process.env.DB_PORT || "5432",
+  "/",
+  process.env.DB_NAME || "medusa-backend",
+].join("")
+
 module.exports = defineConfig({
   projectConfig: {
-    databaseUrl: process.env.DATABASE_URL,
+    databaseUrl,
+    redisUrl: process.env.REDIS_URL,
     http: {
       storeCors: process.env.STORE_CORS!,
       adminCors: process.env.ADMIN_CORS!,

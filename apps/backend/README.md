@@ -42,6 +42,33 @@ Visit the [Quickstart Guide](https://docs.medusajs.com/learn/installation) to se
 
 Visit the [Docs](https://docs.medusajs.com/learn/installation#get-started) to learn more about our system requirements.
 
+## Docker deployment
+
+Build the backend image from the repository root:
+
+```bash
+docker build -f apps/backend/Dockerfile -t coastech-backend .
+```
+
+Run it against a PostgreSQL instance reachable from the container:
+
+```bash
+docker run --rm -p 9000:9000 --env-file apps/backend/.env coastech-backend
+```
+
+Set `DATABASE_URL` to a complete PostgreSQL connection string, or provide `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`. `DATABASE_URL` takes precedence when both forms are present. Keep `.env` out of version control and provide Paystack, CORS, JWT, and cookie secrets through the deployment platform.
+
+For Docker, set `REDIS_URL` to the Redis service name on the shared network, for example `redis://app-redis:6379`, not `localhost`. The backend now passes this value to Medusa's `projectConfig.redisUrl`.
+
+Repeatable image build and deployment scripts are available at the repository root:
+
+```bash
+./scripts/build-backend.sh
+./scripts/deploy-backend.sh
+```
+
+`deploy-backend.sh` expects `.env`, `app-postgres`, and `app-redis` by default on `coastech-net`. Override `POSTGRES_CONTAINER`, `REDIS_CONTAINER`, `DOCKER_NETWORK`, `ENV_FILE`, or `IMAGE_TAG` when the server uses different names. It runs schema migrations with migration scripts skipped; use `RUN_SEED=true ./scripts/deploy-backend.sh` for a fresh database.
+
 ## Hardware ingestion
 
 The backend includes an autonomous hardware ingestion command. It discovers a product page from a query, parses JSON-LD and metadata, downloads and uploads the image through Medusa's public file workflow, then creates a published product, default variant, USD price set, and technical metadata.
