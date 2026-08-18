@@ -10,6 +10,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { HttpTypes } from "@medusajs/types"
 import { OptionValueIds } from "@lib/util/product-option-filters"
 import { getCategorySpecFields } from "@lib/data/specification-filters"
+import { listPromotionalAds } from "@lib/data/promotions"
 
 export default async function CategoryTemplate({
   category,
@@ -18,6 +19,9 @@ export default async function CategoryTemplate({
   countryCode,
   optionValueIds,
   productsIds,
+  brand,
+  priceMin,
+  priceMax,
 }: {
   category: HttpTypes.StoreProductCategory
   sortBy?: SortOptions
@@ -25,10 +29,14 @@ export default async function CategoryTemplate({
   countryCode: string
   optionValueIds?: OptionValueIds
   productsIds?: string[]
+  brand?: string
+  priceMin?: string
+  priceMax?: string
 }) {
   const { fields } = await getCategorySpecFields(category.id).catch(() => ({ fields: [] }))
   const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
+  const flashDeal = (await listPromotionalAds()).find((ad) => ad.placement === "homepage_flash_deals")
 
   if (!category || !countryCode) notFound()
 
@@ -53,6 +61,9 @@ export default async function CategoryTemplate({
         data-testid="sort-by-container"
         hideOptionsPicker
         specFields={fields}
+        brand={brand}
+        priceMin={priceMin}
+        priceMax={priceMax}
       />
       <div className="min-w-0 w-full px-4 py-6 md:flex-1 md:py-8 md:pr-6 md:pl-0">
         <div className="mb-section-gap flex items-center justify-between">
@@ -99,18 +110,7 @@ export default async function CategoryTemplate({
             <p>{category.description}</p>
           </div>
         )}
-        <div className="relative mb-section-gap flex h-32 w-full items-center justify-between overflow-hidden rounded-xl bg-gradient-to-r from-primary-container to-tertiary-container px-8 shadow-md md:h-48">
-          <div className="relative z-10 text-white">
-            <span className="mb-2 inline-block rounded bg-error px-2 py-1 font-label-bold text-label-bold uppercase tracking-wider text-on-error">Flash Sale</span>
-            <h2 className="mb-1 font-headline-lg text-headline-lg font-bold">Up to 40% Off Premium {category.name}</h2>
-            <p className="font-body-md text-body-md opacity-90">Ends in 04:23:59</p>
-          </div>
-          <div
-            className="absolute right-0 top-0 h-full w-1/2 bg-cover bg-center"
-            style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCNr0ML8WrHtf1OIFzdun0cdj0BMtAEJgztet1jECBoczt5YlA1RF23adP-58F1G8EdYlyoW-4x-rdTJj0bQTsGLbA8Mi354CnObZokwET7ML15UbJhbSVL0CajD-_nFcOPFQWUrBGw_6QmTBUCHexS0cRWIqienMk4k3yfhWffT0MQOTIPNRmrIX-ufi-4tPax1Hd13ipYfhD4otyOmMN3zpQNpNVlryATVirET9QA-32O8Qqg9tUz7A')" }}
-          />
-          <div className="absolute inset-0 w-2/3 bg-gradient-to-r from-primary-container via-primary-container/80 to-transparent" />
-        </div>
+        {flashDeal ? <div className="relative mb-section-gap flex h-32 w-full items-center justify-between overflow-hidden rounded-xl bg-gradient-to-r from-primary-container to-tertiary-container px-8 shadow-md md:h-48"><div className="relative z-10 max-w-xl text-white"><span className="mb-2 inline-block rounded bg-error px-2 py-1 font-label-bold text-label-bold uppercase tracking-wider text-on-error">{flashDeal.discount_label ?? "Featured offer"}</span><h2 className="mb-1 font-headline-lg text-headline-lg font-bold">{flashDeal.title}</h2><p className="font-body-md text-body-md opacity-90">{flashDeal.description}</p></div>{flashDeal.image_url ? <div className="absolute right-0 top-0 h-full w-1/2 bg-cover bg-center" style={{ backgroundImage: `url(${flashDeal.image_url})` }} /> : null}<div className="absolute inset-0 w-2/3 bg-gradient-to-r from-primary-container via-primary-container/80 to-transparent" /></div> : null}
         <div className="mb-5 flex gap-2 overflow-x-auto small:hidden">
           <input className="min-w-0 flex-1 rounded-lg border border-surface-variant bg-surface-container-lowest px-4 py-3 font-body-md text-body-md" placeholder={category.name} />
           <button className="rounded-lg border border-surface-variant px-4 text-on-surface">☷</button>
@@ -148,6 +148,9 @@ export default async function CategoryTemplate({
             countryCode={countryCode}
             optionValueIds={optionValueIds}
             productsIds={productsIds}
+            brand={brand}
+            priceMin={priceMin}
+            priceMax={priceMax}
           />
         </Suspense>
       </div>

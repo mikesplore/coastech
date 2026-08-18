@@ -24,3 +24,7 @@ export async function listPromotionalAds(): Promise<PromotionalAd[]> {
     .then(({ ads }) => ads)
     .catch(() => [])
 }
+
+export async function listTrustBadges(): Promise<PromotionalAd[]> {
+  return (await listPromotionalAds()).filter((ad) => ad.placement === "homepage_trust")
+}

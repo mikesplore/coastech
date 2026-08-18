@@ -20,6 +20,9 @@ type RefinementListProps = {
   hideOptionsPicker?: boolean
   "data-testid"?: string
   specFields?: SpecFilterField[]
+  brand?: string
+  priceMin?: string
+  priceMax?: string
 }
 
 const RefinementList = ({
@@ -27,8 +30,14 @@ const RefinementList = ({
   hideOptionsPicker = false,
   "data-testid": dataTestId,
   specFields = [],
+  brand,
+  priceMin,
+  priceMax,
 }: RefinementListProps) => {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [brandValue, setBrandValue] = useState(brand ?? "")
+  const [priceMinValue, setPriceMinValue] = useState(priceMin ?? "")
+  const [priceMaxValue, setPriceMaxValue] = useState(priceMax ?? "")
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -56,6 +65,17 @@ const RefinementList = ({
 
   const setQueryParams = (name: string, value: string) =>
     updateQueryParams((params) => params.set(name, value))
+
+  const applyProductFilters = () => {
+    updateQueryParams((params) => {
+      params.delete("brand")
+      params.delete("price_min")
+      params.delete("price_max")
+      if (brandValue.trim()) params.set("brand", brandValue.trim())
+      if (priceMinValue) params.set("price_min", priceMinValue)
+      if (priceMaxValue) params.set("price_max", priceMaxValue)
+    })
+  }
 
   const selectedOptionValueIds = useMemo(
     () => parseOptionValueIds(searchParams),
@@ -91,23 +111,16 @@ const RefinementList = ({
           <div className="mb-6">
             <h4 className="mb-2 font-body-md text-on-surface-variant">Price Range</h4>
             <div className="flex items-center gap-2">
-              <input placeholder="Min" className="h-8 w-full rounded border border-surface-variant bg-surface-container-lowest px-2 font-body-md text-body-md focus:border-primary-container focus:ring-0" />
+              <input placeholder="Min" value={priceMinValue} onChange={(event) => setPriceMinValue(event.target.value)} className="h-8 w-full rounded border border-surface-variant bg-surface-container-lowest px-2 font-body-md text-body-md focus:border-primary-container focus:ring-0" />
               <span className="text-secondary">-</span>
-              <input placeholder="Max" className="h-8 w-full rounded border border-surface-variant bg-surface-container-lowest px-2 font-body-md text-body-md focus:border-primary-container focus:ring-0" />
+              <input placeholder="Max" value={priceMaxValue} onChange={(event) => setPriceMaxValue(event.target.value)} className="h-8 w-full rounded border border-surface-variant bg-surface-container-lowest px-2 font-body-md text-body-md focus:border-primary-container focus:ring-0" />
             </div>
           </div>
           <div className="mb-6">
             <h4 className="mb-2 font-body-md text-on-surface-variant">Brand</h4>
-            <div className="flex flex-col gap-2">
-              {["TechPro", "Nexus", "Aero"].map((brand, index) => (
-                <label key={brand} className="flex cursor-pointer items-center gap-2">
-                  <input type="checkbox" defaultChecked={index === 0} className="rounded border-surface-variant text-primary-container focus:ring-primary-container" />
-                  <span className="font-body-md text-on-surface">{brand}</span>
-                </label>
-              ))}
-            </div>
+            <input placeholder="e.g. ASUS, Dell, NVIDIA" value={brandValue} onChange={(event) => setBrandValue(event.target.value)} className="h-8 w-full rounded border border-surface-variant bg-surface-container-lowest px-2 font-body-md text-body-md focus:border-primary-container focus:ring-0" />
           </div>
-          <button className="w-full rounded-lg border border-on-surface bg-surface-container py-2 font-label-bold text-label-bold text-on-surface transition-colors hover:bg-surface-container-high">Apply Filters</button>
+          <button onClick={applyProductFilters} className="w-full rounded-lg border border-on-surface bg-surface-container py-2 font-label-bold text-label-bold text-on-surface transition-colors hover:bg-surface-container-high">Apply Filters</button>
         </div>
         <div><h3 className="mb-3 font-label-bold text-label-bold text-on-surface">Sort by</h3><SortProducts sortBy={sortBy} setQueryParams={setQueryParams} data-testid={dataTestId} /></div>
         {!hideOptionsPicker && <OptionsPicker selectedValueIds={selectedOptionValueIds} setOptionValueIds={setOptionValueIds} />}

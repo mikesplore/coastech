@@ -1,6 +1,7 @@
 import { HttpTypes } from "@medusajs/types"
 import { Heading, Text } from "@modules/common/components/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { getProductRating, getProductStockStatus } from "@lib/util/product-content"
 
 type ProductInfoProps = {
   product: HttpTypes.StoreProduct
@@ -8,6 +9,8 @@ type ProductInfoProps = {
 
 const ProductInfo = ({ product }: ProductInfoProps) => {
   const category = product.categories?.[0]
+  const rating = getProductRating(product)
+  const stock = getProductStockStatus(product)
 
   return (
     <div id="product-info">
@@ -34,8 +37,8 @@ const ProductInfo = ({ product }: ProductInfoProps) => {
         </Heading>
 
         <div className="flex items-center gap-3 text-sm">
-          <span className="rounded-full bg-orange-50 px-2 py-1 text-orange-600" aria-label="Product rating">★ 4.8 <span className="text-xs text-gray-500">(124 reviews)</span></span>
-          <span className="text-green-600">● In stock</span>
+          {rating ? <span className="rounded-full bg-orange-50 px-2 py-1 text-orange-600" aria-label="Product rating">★ {rating.rating.toFixed(1)} <span className="text-xs text-gray-500">({rating.reviewCount} reviews)</span></span> : null}
+          <span className={stock.tone === "out-of-stock" ? "text-gray-500" : stock.tone === "low-stock" ? "text-amber-700" : "text-green-600"}>● {stock.label}</span>
         </div>
 
         <Text

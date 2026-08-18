@@ -7,6 +7,8 @@ const PromotionalAd = model.define("promotional_ad", {
   description: model.text().nullable(),
   image_url: model.text().nullable(),
   href: model.text(),
+  target_type: model.text().default("url"),
+  target_id: model.text().nullable(),
   placement: model.text().default("homepage_carousel"),
   cta_label: model.text().nullable(),
   discount_label: model.text().nullable(),

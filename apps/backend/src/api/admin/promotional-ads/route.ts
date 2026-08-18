@@ -10,8 +10,9 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
 export async function POST(req: MedusaRequest, res: MedusaResponse): Promise<void> {
   const service = req.scope.resolve(PROMOTIONS_MODULE) as PromotionsModuleService
   const body = req.body as Record<string, unknown>
-  if (!body.title || !body.href) {
-    res.status(400).json({ message: "title and href are required" })
+  const targetType = body.target_type ?? "url"
+  if (!body.title || (!body.href && targetType === "url") || (targetType !== "url" && !body.target_id)) {
+    res.status(400).json({ message: "title and a destination are required" })
     return
   }
   const ad = await service.createPromotionalAds([body] as Parameters<typeof service.createPromotionalAds>[0])

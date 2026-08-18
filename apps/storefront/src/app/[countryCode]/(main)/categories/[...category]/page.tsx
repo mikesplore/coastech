@@ -92,6 +92,9 @@ export default async function CategoryPage(props: Props) {
       countryCode={params.countryCode}
       optionValueIds={optionValueIds}
       productsIds={filteredProducts?.products.map((product) => product.id)}
+      brand={typeof searchParams.brand === "string" ? searchParams.brand : undefined}
+      priceMin={typeof searchParams.price_min === "string" ? searchParams.price_min : undefined}
+      priceMax={typeof searchParams.price_max === "string" ? searchParams.price_max : undefined}
     />
   )
 }

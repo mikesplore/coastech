@@ -102,12 +102,18 @@ export const listProductsWithSort = async ({
   sortBy = "created_at",
   countryCode,
   optionValueIds,
+  brand,
+  priceMin,
+  priceMax,
 }: {
   page?: number
   queryParams?: ProductListQueryParams
   sortBy?: SortOptions
   countryCode: string
   optionValueIds?: OptionValueIds
+  brand?: string
+  priceMin?: string
+  priceMax?: string
 }): Promise<{
   response: { products: HttpTypes.StoreProduct[]; count: number }
   nextPage: number | null
@@ -130,11 +136,21 @@ export const listProductsWithSort = async ({
     countryCode,
   })
 
-  const sortedProducts = sortProducts(products, sortBy)
+  const minimumPrice = Number(priceMin)
+  const maximumPrice = Number(priceMax)
+  const hasMinimum = priceMin !== undefined && priceMin !== "" && Number.isFinite(minimumPrice)
+  const hasMaximum = priceMax !== undefined && priceMax !== "" && Number.isFinite(maximumPrice)
+  const normalizedBrand = brand?.trim().toLowerCase()
+  const filteredProducts = products.filter((product) => {
+    const productBrand = String(product.metadata?.brand ?? product.title.split(" ")[0]).toLowerCase()
+    const price = Number(product.variants?.[0]?.calculated_price?.calculated_amount ?? 0)
+    return (!normalizedBrand || productBrand.includes(normalizedBrand)) && (!hasMinimum || price >= minimumPrice) && (!hasMaximum || price <= maximumPrice)
+  })
+  const sortedProducts = sortProducts(filteredProducts, sortBy)
 
   const pageParam = (page - 1) * limit
 
-  const filteredCount = products.length
+  const filteredCount = filteredProducts.length
 
   const nextPage = filteredCount > pageParam + limit ? pageParam + limit : null
 

@@ -1265,7 +1265,6 @@ export default async function initial_data_seed({
         href: "/store",
         placement: "homepage_flash_deals",
         cta_label: "Shop deals",
-        discount_label: "-15% OFF",
         priority: 100,
         is_active: true,
       },
@@ -1281,11 +1280,62 @@ export default async function initial_data_seed({
       href: "/store",
       placement: "homepage_flash_deals",
       cta_label: "Shop deals",
-      discount_label: "-15% OFF",
       priority: 100,
       is_active: true,
     }])
     logger.info("Seeded homepage flash-deal configuration.")
+  }
+
+  const trustMessages = [
+    {
+      title: "Same-day delivery within Mombasa",
+      description: "Fast local fulfillment for eligible orders.",
+      href: "/store",
+      placement: "homepage_trust",
+      priority: 100,
+      is_active: true,
+    },
+    {
+      title: "Official manufacturer warranties",
+      description: "Manufacturer-backed support on eligible products.",
+      href: "/store",
+      placement: "homepage_trust",
+      priority: 90,
+      is_active: true,
+    },
+    {
+      title: "Secure checkout",
+      description: "Pay safely in KES through our protected checkout.",
+      href: "/store",
+      placement: "homepage_trust",
+      priority: 80,
+      is_active: true,
+    },
+    {
+      title: "Local pickup available",
+      description: "Collect eligible orders from our Mombasa location.",
+      href: "/store",
+      placement: "homepage_trust",
+      priority: 70,
+      is_active: true,
+    },
+  ]
+  const missingTrustMessages = trustMessages.filter(
+    (message) => !existingPromotionalAds.some((ad) => ad.title === message.title && ad.placement === "homepage_trust")
+  )
+  if (missingTrustMessages.length > 0) {
+    await promotionsModuleService.createPromotionalAds(missingTrustMessages)
+    logger.info(`Seeded ${missingTrustMessages.length} homepage trust messages.`)
+  }
+
+  const unscopedFlashDeals = existingPromotionalAds.filter(
+    (ad) => ad.placement === "homepage_flash_deals" && ad.discount_label && !ad.metadata?.product_ids
+  )
+  if (unscopedFlashDeals.length > 0) {
+    await Promise.all(
+      unscopedFlashDeals.map((ad) => promotionsModuleService.updatePromotionalAds({ id: ad.id, discount_label: null }))
+    )
+    logger.info(`Removed unscoped discount labels from ${unscopedFlashDeals.length} flash-deal promotions.`)
   }
 
   // ---------------------------------------------------------------------------

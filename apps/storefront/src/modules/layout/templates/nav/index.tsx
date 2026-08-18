@@ -4,13 +4,15 @@ import { ShoppingCart } from "@medusajs/icons"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import SearchBar from "@modules/layout/components/search-bar"
+import { listPromotionalAds } from "@lib/data/promotions"
 
-export default function Nav() {
+export default async function Nav() {
+  const trustMessages = (await listPromotionalAds()).filter((ad) => ad.placement === "homepage_trust").map((ad) => ad.title)
+  const trustText = trustMessages.join(" · ")
+
   return (
     <div className="sticky top-0 z-50">
-      <div className="flex h-7 items-center justify-center bg-on-surface px-3 font-label-sm text-label-sm text-white">
-        Same-day delivery within Mombasa · Official manufacturer warranties
-      </div>
+      {trustText ? <div className="flex h-7 items-center justify-center bg-on-surface px-3 font-label-sm text-label-sm text-white">{trustText}</div> : null}
     <header className="flex h-16 w-full items-center justify-between border-b border-surface-variant bg-surface/95 px-margin-mobile backdrop-blur-md">
       <div className="flex items-center gap-4">
         <span className="hidden rounded bg-surface-container px-2 py-1 font-label-sm text-label-sm text-secondary md:inline-flex">Kenya · KES</span>
@@ -46,9 +48,9 @@ export default function Nav() {
           </LocalizedClientLink>
           <LocalizedClientLink
             className="rounded px-3 py-2 text-secondary transition-opacity duration-150 hover:bg-surface-container active:opacity-80"
-            href="/cart"
+            href="/builder"
           >
-            Cart
+            Build checker
           </LocalizedClientLink>
           <LocalizedClientLink
             className="rounded px-3 py-2 text-secondary transition-opacity duration-150 hover:bg-surface-container active:opacity-80"

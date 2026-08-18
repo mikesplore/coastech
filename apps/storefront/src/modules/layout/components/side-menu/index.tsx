@@ -15,6 +15,7 @@ const SideMenuItems = {
   Home: "/",
   Categories: "/store",
   Deals: "/store?sortBy=price_asc",
+  "Build checker": "/builder",
   Cart: "/cart",
   Account: "/account",
 }
