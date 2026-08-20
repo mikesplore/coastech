@@ -56,6 +56,11 @@ Run it against a PostgreSQL instance reachable from the container:
 docker run --rm -p 9000:9000 --env-file apps/backend/.env coastech-backend
 ```
 
+The production container must be started with `medusa start` from the built
+`.medusa/server` output. Do not run `medusa develop` behind the public admin
+domain: it serves Vite development modules such as `/app/@vite/client` and
+filesystem URLs under `/app/@fs/`, which are not valid for production users.
+
 Set `DATABASE_URL` to a complete PostgreSQL connection string, or provide `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`. `DATABASE_URL` takes precedence when both forms are present. Keep `.env` out of version control and provide Paystack, CORS, JWT, and cookie secrets through the deployment platform.
 
 For Docker, set `REDIS_URL` to the Redis service name on the shared network, for example `redis://app-redis:6379`, not `localhost`. The backend now passes this value to Medusa's `projectConfig.redisUrl`.

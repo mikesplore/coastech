@@ -76,6 +76,12 @@ for attempt in $(seq 1 60); do
   fi
 
   if curl -fsS --max-time 2 "http://127.0.0.1:$host_port/health" >/dev/null 2>&1; then
+    admin_html="$(curl -fsS --max-time 2 "http://127.0.0.1:$host_port/app/")"
+    if grep -qE '/app/@vite/client|@react-refresh|/app/entry\.jsx' <<<"$admin_html"; then
+      printf 'Backend is serving the Medusa admin in development mode. Deploy the built image with `medusa start`.\n' >&2
+      docker logs --tail 100 "$container_name" >&2
+      exit 1
+    fi
     printf 'Backend is ready: %s\n' "http://127.0.0.1:$host_port"
     exit 0
   fi

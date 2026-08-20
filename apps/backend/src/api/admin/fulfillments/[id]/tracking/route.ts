@@ -27,17 +27,33 @@ export async function POST(req: MedusaRequest<TrackingBody>, res: MedusaResponse
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const { data: existingFulfillments } = await query.graph({
     entity: "fulfillment",
-    fields: ["id", "metadata"],
+    fields: ["id", "shipped_at", "metadata", "labels.tracking_number", "labels.tracking_url"],
     filters: { id: fulfillmentId },
   })
-  const existingMetadata = existingFulfillments[0]?.metadata ?? {}
+  const existingFulfillment = existingFulfillments[0]
+  if (!existingFulfillment) {
+    res.status(404).json({ message: "Fulfillment not found" })
+    return
+  }
+  const existingMetadata = existingFulfillment.metadata ?? {}
+  const existingLabel = (existingFulfillment as { labels?: Array<{ tracking_number?: string; tracking_url?: string }> }).labels?.[0]
+  if (
+    existingFulfillment.shipped_at &&
+    existingLabel &&
+    (existingLabel.tracking_number !== trackingNumber || existingLabel.tracking_url !== trackingUrl)
+  ) {
+    res.status(409).json({ message: "Tracking labels cannot be changed after shipment" })
+    return
+  }
 
-  const { result: shipment } = await createShipmentWorkflow(req.scope).run({
-    input: {
-      id: fulfillmentId,
-      labels: [{ tracking_number: trackingNumber, tracking_url: trackingUrl, label_url: trackingUrl }],
-    },
-  })
+  const shipment = existingFulfillment.shipped_at
+    ? undefined
+    : (await createShipmentWorkflow(req.scope).run({
+        input: {
+          id: fulfillmentId,
+          labels: [{ tracking_number: trackingNumber, tracking_url: trackingUrl, label_url: trackingUrl }],
+        },
+      })).result
   const { result: fulfillment } = await updateFulfillmentWorkflow(req.scope).run({
     input: { id: fulfillmentId, metadata },
   })
