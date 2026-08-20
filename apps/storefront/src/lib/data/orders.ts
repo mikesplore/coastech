@@ -52,6 +52,16 @@ export const listOrders = async (
     .catch((err) => medusaError(err))
 }
 
+export const lookupGuestOrder = async (email: string, orderId: string) => {
+  return sdk.client
+    .fetch<HttpTypes.StoreOrderResponse>("/store/orders/lookup", {
+      method: "POST",
+      body: { email, order_id: orderId },
+      cache: "no-store",
+    })
+    .then(({ order }) => order)
+}
+
 export const createTransferRequest = async (
   state: {
     success: boolean
