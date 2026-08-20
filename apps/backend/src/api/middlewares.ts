@@ -283,10 +283,14 @@ export default defineMiddlewares({
     matcher: "/admin/transactions*",
     middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
   },
-  {
-    matcher: "/admin/fulfillments/:id/tracking",
-    middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
-  },
+    {
+      matcher: "/admin/fulfillments/:id/tracking",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
+    {
+      matcher: "/admin/dashboard/overview",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
     {
       matcher: "/admin/custom",
       middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
@@ -295,6 +299,11 @@ export default defineMiddlewares({
       matcher: "/store/carts/:id/shipping-methods",
       method: ["POST"],
       middlewares: [validateShippingSelection],
+    },
+    {
+      matcher: "/store/customers/link-orders",
+      method: ["POST"],
+      middlewares: [authenticate("customer", ["session", "bearer"])],
     },
     {
       matcher: "/store/payment-collections/:id/payment-sessions",

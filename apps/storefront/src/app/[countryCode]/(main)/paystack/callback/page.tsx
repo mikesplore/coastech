@@ -1,4 +1,5 @@
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import PaystackProcessing from "@modules/checkout/components/paystack-processing"
 import { redirect } from "next/navigation"
 
 export const dynamic = "force-dynamic"
@@ -23,6 +24,9 @@ export default async function PaystackCallback({
       `/${countryCode}/order/${params.order_id}/confirmed`
     )
     redirect(`/api/cart/clear?next=${next}`)
+  }
+  if (params.status === "processing" && (params.reference || params.trxref)) {
+    return <PaystackProcessing countryCode={countryCode} reference={params.reference ?? params.trxref!} />
   }
   const completionError = params.message ?? null
 

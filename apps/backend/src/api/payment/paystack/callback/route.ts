@@ -22,8 +22,9 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
 
   try {
     let result = await authorizePaystackReference(req, reference)
-    for (let attempt = 0; attempt < 8 && !result.authorized && result.status !== "not_found"; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+    for (let attempt = 0; attempt < 10 && !result.authorized && result.status !== "not_found"; attempt += 1) {
+      const delay = Math.min(1000 * 2 ** Math.min(attempt, 4), 8000)
+      await new Promise((resolve) => setTimeout(resolve, delay))
       result = await authorizePaystackReference(req, reference)
     }
 
@@ -46,7 +47,10 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
         redirectUrl.searchParams.set("order_id", completion.result.id)
       }
     } else {
-      redirectUrl.searchParams.set("status", result.status)
+      redirectUrl.searchParams.set(
+        "status",
+        result.status === "pending" || result.status === "processing" ? "processing" : result.status
+      )
     }
   } catch {
     redirectUrl.searchParams.set("reference", reference)

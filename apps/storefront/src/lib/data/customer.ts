@@ -275,7 +275,19 @@ async function completeLogin(
     return { state: "error", error: String(error) }
   }
 
+  await linkGuestOrders(token)
+
   return { state: "success" }
+}
+
+async function linkGuestOrders(token: string) {
+  await sdk.client
+    .fetch("/store/customers/link-orders", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+      cache: "no-store",
+    })
+    .catch(() => undefined)
 }
 
 // Confirms a customer's email using the token from the verification link.

@@ -10,9 +10,10 @@ import { signup } from "@lib/data/customer"
 
 type Props = {
   setCurrentView: (view: LOGIN_VIEW) => void
+  initialEmail?: string
 }
 
-const Register = ({ setCurrentView }: Props) => {
+const Register = ({ setCurrentView, initialEmail }: Props) => {
   const [message, formAction] = useActionState(signup, null)
 
   return (
@@ -55,6 +56,7 @@ const Register = ({ setCurrentView }: Props) => {
           <Input
             label="Email"
             name="email"
+            defaultValue={initialEmail}
             required
             type="email"
             autoComplete="email"

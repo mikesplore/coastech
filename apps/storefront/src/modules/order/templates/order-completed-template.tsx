@@ -9,6 +9,7 @@ import OrderDetails from "@modules/order/components/order-details"
 import ShippingDetails from "@modules/order/components/shipping-details"
 import PaymentDetails from "@modules/order/components/payment-details"
 import { HttpTypes } from "@medusajs/types"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 type OrderCompletedTemplateProps = {
   order: HttpTypes.StoreOrder
@@ -37,6 +38,17 @@ export default async function OrderCompletedTemplate({
             <span>Your order was placed successfully.</span>
           </Heading>
           <OrderDetails order={order} />
+          {!order.customer_id && (
+            <div className="border border-ui-border-base bg-ui-bg-subtle p-4">
+              <p className="text-base-regular">Create an account to keep your order history in one place.</p>
+              <LocalizedClientLink
+                href={`/account?view=register&email=${encodeURIComponent(order.email ?? "")}`}
+                className="mt-3 inline-block text-ui-fg-interactive underline"
+              >
+                Create an account
+              </LocalizedClientLink>
+            </div>
+          )}
           <Heading level="h2" className="flex flex-row text-3xl-regular">
             Summary
           </Heading>

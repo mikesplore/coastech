@@ -7,6 +7,11 @@ export const metadata: Metadata = {
   description: "Sign in to your Medusa Store account.",
 }
 
-export default function Login() {
-  return <LoginTemplate />
+export default async function Login({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string; email?: string }>
+}) {
+  const params = await searchParams
+  return <LoginTemplate initialView={params.view} initialEmail={params.email} />
 }

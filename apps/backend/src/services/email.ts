@@ -1,6 +1,7 @@
 import { Resend } from "resend"
 import { renderOrderConfirmationEmail } from "./email-templates/order-confirmation"
 import { renderOrderShippedEmail } from "./email-templates/order-shipped"
+import { renderOrderLifecycleEmail } from "./email-templates/order-lifecycle"
 
 type EmailLogger = {
   warn: (message: string) => void
@@ -104,5 +105,50 @@ export const sendOrderShippedEmail = async ({
   } catch (error) {
     logger.error(`Shipment email failed for order ${order.id}`, error)
     return false
+  }
+}
+
+export const sendOrderLifecycleEmail = async ({
+  order,
+  title,
+  message,
+  detail,
+  logger,
+}: {
+  order: { id: string; display_id?: string | number | null; email?: string | null }
+  title: string
+  message: string
+  detail?: string
+  logger: EmailLogger
+}) => {
+  const apiKey = process.env.RESEND_API_KEY
+  const from = process.env.RESEND_FROM_EMAIL
+  const storefrontUrl = process.env.STOREFRONT_URL ?? "http://localhost:8001"
+  const countryCode = process.env.STOREFRONT_DEFAULT_COUNTRY ?? "ke"
+
+  if (!apiKey || !from) {
+    logger.warn(`Lifecycle email skipped for order ${order.id}: Resend is not configured`)
+    return
+  }
+
+  if (!order.email) {
+    logger.warn(`Lifecycle email skipped: order ${order.id} has no email`)
+    return
+  }
+
+  const trackingUrl = `${storefrontUrl.replace(/\/$/, "")}/${countryCode}/order-lookup?order_id=${encodeURIComponent(order.id)}&email=${encodeURIComponent(order.email)}`
+
+  try {
+    const { error } = await new Resend(apiKey).emails.send({
+      from,
+      to: order.email,
+      subject: `${title} #${order.display_id ?? order.id}`,
+      html: renderOrderLifecycleEmail({ order, title, message, detail, trackingUrl }),
+    })
+    if (error) {
+      logger.error(`Lifecycle email failed for order ${order.id}`, error)
+    }
+  } catch (error) {
+    logger.error(`Lifecycle email failed for order ${order.id}`, error)
   }
 }

@@ -1,4 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
+import { completeCartWorkflowId } from "@medusajs/medusa/core-flows"
+import { Modules } from "@medusajs/framework/utils"
 import { authorizePaystackReference } from "../authorize"
 
 export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void> {
@@ -15,8 +17,17 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
     return
   }
 
-  res.json({
-    reference,
-    ...result,
-  })
+  if (result.authorized && result.cart_id) {
+    const workflowEngine = req.scope.resolve(Modules.WORKFLOW_ENGINE)
+    const completion = await workflowEngine.run(completeCartWorkflowId, {
+      input: { id: result.cart_id },
+      throwOnError: false,
+    })
+    if (!completion.errors?.[0] && completion.result?.id) {
+      res.json({ reference, ...result, status: "success", order_id: completion.result.id })
+      return
+    }
+  }
+
+  res.json({ reference, ...result })
 }
