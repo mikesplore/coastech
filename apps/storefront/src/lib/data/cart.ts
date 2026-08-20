@@ -34,10 +34,6 @@ export async function retrieveCart(cartId?: string, fields?: string) {
     ...(await getAuthHeaders()),
   }
 
-  const next = {
-    ...(await getCacheOptions("carts")),
-  }
-
   return await sdk.client
     .fetch<HttpTypes.StoreCartResponse>(`/store/carts/${id}`, {
       method: "GET",
@@ -45,10 +41,14 @@ export async function retrieveCart(cartId?: string, fields?: string) {
         fields,
       },
       headers,
-      next,
-      cache: "force-cache",
+      cache: "no-store",
     })
-    .then(({ cart }: { cart: HttpTypes.StoreCart }) => cart)
+    .then(async ({ cart }: { cart: HttpTypes.StoreCart }) => {
+      if (cart.completed_at) {
+        return null
+      }
+      return cart
+    })
     .catch(() => null)
 }
 
@@ -59,7 +59,7 @@ export async function getOrSetCart(countryCode: string) {
     throw new Error(`Region not found for country code: ${countryCode}`)
   }
 
-  let cart = await retrieveCart(undefined, "id,region_id")
+  let cart = await retrieveCart(undefined, "id, region_id, completed_at")
 
   const headers = {
     ...(await getAuthHeaders()),
@@ -246,7 +246,18 @@ export async function initiatePaymentSession(
   }
 
   return sdk.store.payment
-    .initiatePaymentSession(cart, data, {}, headers)
+    .initiatePaymentSession(
+      cart,
+      {
+        ...data,
+        data: {
+          ...(data.data ?? {}),
+          cart_id: cart.id,
+        },
+      },
+      {},
+      headers
+    )
     .then(async (resp) => {
       const cartCacheTag = await getCacheTag("carts")
       revalidateTag(cartCacheTag)

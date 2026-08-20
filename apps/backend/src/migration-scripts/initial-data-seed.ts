@@ -148,7 +148,7 @@ export default async function initial_data_seed({
             name: "Kenya",
             currency_code: "kes",
             countries: ["ke"],
-            payment_providers: ["pp_system_default", "pp_paystack"],
+            payment_providers: ["pp_system_default", "pp_paystack_paystack"],
           },
         ],
       },
@@ -350,12 +350,6 @@ export default async function initial_data_seed({
     });
     logger.info("Finished seeding fulfillment data.");
 
-    await linkSalesChannelsToStockLocationWorkflow(container).run({
-      input: {
-        id: stockLocation.id,
-        add: [defaultSalesChannel!.id],
-      },
-    });
     logger.info("Finished seeding stock location data.");
   } else {
     // Reuse the existing shipping profile so products reference a valid one.
@@ -369,6 +363,18 @@ export default async function initial_data_seed({
       fields: ["id", "name"],
     });
     stockLocation = existingLocations[0];
+  }
+
+  // Keep this link in sync on reruns as well. The initial setup is skipped
+  // once the store exists, but products still require this association for
+  // cart line-item creation and inventory validation.
+  if (stockLocation && defaultSalesChannel) {
+    await linkSalesChannelsToStockLocationWorkflow(container).run({
+      input: {
+        id: stockLocation.id,
+        add: [defaultSalesChannel.id],
+      },
+    });
   }
 
   // ---------------------------------------------------------------------------

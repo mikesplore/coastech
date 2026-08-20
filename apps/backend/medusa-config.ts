@@ -2,6 +2,11 @@ import { loadEnv, defineConfig } from '@medusajs/framework/utils'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
+console.info("[paystack] callback configuration", {
+  backend: process.env.PAYSTACK_CALLBACK_URL ?? "<missing>",
+  frontend: process.env.PAYSTACK_FRONTEND_CALLBACK_URL ?? "<missing>",
+})
+
 const databaseUrl = process.env.DATABASE_URL || [
   "postgres://",
   encodeURIComponent(process.env.DB_USER || "postgres"),
@@ -22,6 +27,18 @@ const cloudinaryConfigured = Boolean(
 )
 
 module.exports = defineConfig({
+  admin: {
+    vite: () => ({
+      server: {
+        allowedHosts: [
+          "localhost",
+          ".localhost",
+          "127.0.0.1",
+          "paystack.mikesplore.me",
+        ],
+      },
+    }),
+  },
   projectConfig: {
     databaseUrl,
     redisUrl: process.env.REDIS_URL,

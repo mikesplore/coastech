@@ -2,7 +2,6 @@ import Back from "@modules/common/icons/back"
 import FastDelivery from "@modules/common/icons/fast-delivery"
 import Refresh from "@modules/common/icons/refresh"
 
-import Accordion from "./accordion"
 import { HttpTypes } from "@medusajs/types"
 import { getProductSpecifications } from "@lib/data/specifications"
 
@@ -12,81 +11,48 @@ type ProductTabsProps = {
 
 const ProductTabs = async ({ product }: ProductTabsProps) => {
   const specs = product.id ? await getProductSpecifications(product.id).catch(() => ({ specifications: [] })) : { specifications: [] }
-  const tabs = [
-    {
-      label: "Product Information",
-      component: <ProductInfoTab product={product} specifications={specs.specifications} />,
-    },
-    {
-      label: "Shipping & Returns",
-      component: <ShippingInfoTab />,
-    },
-  ]
 
   return (
-    <div className="w-full rounded-lg border border-gray-200 bg-white">
-      <h2 className="border-b border-gray-200 px-5 py-4 text-2xl font-bold">Technical Specifications</h2>
-      <div className="divide-y divide-gray-200">{specs.specifications.length ? specs.specifications.map((specification) => <div key={specification.label} className="grid grid-cols-2 px-5 py-4 text-sm"><span className="text-gray-600">{specification.label}</span><span className="text-right">{String(specification.value)}{specification.unit ? ` ${specification.unit}` : ""}</span></div>) : <div className="grid grid-cols-2 px-5 py-4 text-sm"><span className="text-gray-600">Description</span><span className="text-right">{product.description || "Coast Tech hardware"}</span></div>}</div>
-      <div className="mt-4 border-t border-gray-200 px-5 py-5"><ShippingInfoTab /></div>
-    </div>
-  )
-}
-
-const ProductInfoTab = ({ product, specifications = [] }: ProductTabsProps & { specifications?: Array<{ label: string; value: unknown; unit?: string }> }) => {
-  return (
-    <div className="text-small-regular py-8">
-      <div className="grid gap-6">
-        {specifications.length > 0 && (
-          <div className="grid gap-2 border-b border-raised pb-6">
-            <p className="font-mono text-xs uppercase tracking-widest text-copper">Technical datasheet</p>
-            {specifications.map((specification) => (
-              <div key={specification.label} className="flex justify-between gap-4 border-b border-raised/70 py-2">
-                <span className="text-muted">{specification.label}</span>
-                <span className="text-right text-ink">{String(specification.value)}{specification.unit ? ` ${specification.unit}` : ""}</span>
+    <div className="w-full overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <section aria-labelledby="technical-specifications">
+        <h2 id="technical-specifications" className="border-b border-gray-200 px-5 py-4 text-2xl font-bold">
+          Technical Specifications
+        </h2>
+        {specs.specifications.length > 0 ? (
+          <div className="divide-y divide-gray-200">
+            {specs.specifications.map((specification) => (
+              <div key={specification.label} className="grid grid-cols-2 gap-4 px-5 py-4 text-sm">
+                <span className="text-gray-600">{specification.label}</span>
+                <span className="text-right">
+                  {String(specification.value)}{specification.unit ? ` ${specification.unit}` : ""}
+                </span>
               </div>
             ))}
           </div>
+        ) : (
+          <p className="px-5 py-6 text-sm text-gray-500">
+            Technical specifications are not available for this product.
+          </p>
         )}
-        <div className="grid grid-cols-2 gap-x-8">
-        <div className="flex flex-col gap-y-4">
-          <div>
-            <span className="font-semibold">Material</span>
-            <p>{product.material ? product.material : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Country of origin</span>
-            <p>{product.origin_country ? product.origin_country : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Type</span>
-            <p>{product.type ? product.type.value : "-"}</p>
-          </div>
+      </section>
+
+      <section className="border-t border-gray-200" aria-labelledby="delivery-returns">
+        <h2 id="delivery-returns" className="border-b border-gray-200 px-5 py-4 text-2xl font-bold">
+          Delivery &amp; Returns
+        </h2>
+        <div className="px-5 pb-6 pt-6 md:px-8 md:pb-8">
+          <ShippingInfoTab />
         </div>
-        <div className="flex flex-col gap-y-4">
-          <div>
-            <span className="font-semibold">Weight</span>
-            <p>{product.weight ? `${product.weight} g` : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Dimensions</span>
-            <p>
-              {product.length && product.width && product.height
-                ? `${product.length}L x ${product.width}W x ${product.height}H`
-                : "-"}
-            </p>
-          </div>
-        </div>
-      </div>
-      </div>
+      </section>
     </div>
   )
 }
 
 const ShippingInfoTab = () => {
   return (
-    <div className="text-small-regular py-8">
-      <div className="grid grid-cols-1 gap-y-8">
-        <div className="flex items-start gap-x-2">
+    <div className="text-small-regular">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
           <FastDelivery />
           <div>
             <span className="font-semibold">Fast delivery</span>
@@ -96,7 +62,7 @@ const ShippingInfoTab = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-start gap-x-2">
+        <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
           <Refresh />
           <div>
             <span className="font-semibold">Simple exchanges</span>
@@ -106,7 +72,7 @@ const ShippingInfoTab = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-start gap-x-2">
+        <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
           <Back />
           <div>
             <span className="font-semibold">Easy returns</span>

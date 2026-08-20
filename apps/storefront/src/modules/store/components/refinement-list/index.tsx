@@ -2,7 +2,6 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
-import { Component, ComputerDesktop, LaptopMobile } from "@medusajs/icons"
 
 import {
   OPTION_VALUE_QUERY_KEY,
@@ -12,7 +11,7 @@ import OptionsPicker from "./options-picker"
 import SortProducts, { SortOptions } from "./sort-products"
 import SpecFields from "./spec-fields"
 import { SpecFilterField } from "@lib/data/specification-filters"
-import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import CoastTechMenu from "../coast-tech-menu"
 
 type RefinementListProps = {
   sortBy: SortOptions
@@ -95,16 +94,7 @@ const RefinementList = ({
       <button onClick={() => setMobileOpen((open) => !open)} className="mb-4 rounded-full border border-on-surface bg-transparent px-5 py-2 font-label-bold text-label-bold text-on-surface transition-colors hover:bg-surface-container md:hidden">☷ &nbsp; Filter & Sort</button>
       <aside className={`${mobileOpen ? "flex" : "hidden"} mb-5 flex-col gap-6 rounded-r-xl border-r border-surface-variant bg-surface p-4 shadow-xl md:flex md:h-[calc(100vh-5.75rem)] md:w-72 md:shrink-0 md:sticky md:top-[5.75rem] md:overflow-y-auto`}>
         <div className="mb-2">
-          <h2 className="mb-4 font-headline-sm text-headline-sm text-primary">COAST TECH MENU</h2>
-          <nav className="flex flex-col gap-2">
-            {[
-              ["laptop_mac", "Laptops", "/categories/laptops"],
-              ["desktop_windows", "Desktops", "/categories/desktops"],
-              ["memory", "Components", "/store"],
-              ["router", "Networking", "/categories/networking"],
-              ["mouse", "Peripherals", "/categories/peripherals"],
-            ].map(([icon, label, href]) => <LocalizedCategoryLink key={label} icon={icon} label={label} href={href} active={label.toLowerCase() === "laptops" && pathname.includes("laptop")} />)}
-          </nav>
+          <CoastTechMenu />
         </div>
         <div className="mt-4 border-t border-surface-variant pt-6">
           <h3 className="mb-4 font-label-bold text-label-bold uppercase tracking-wider text-on-surface">Filters</h3>
@@ -128,11 +118,6 @@ const RefinementList = ({
       </aside>
     </>
   )
-}
-
-function LocalizedCategoryLink({ icon, label, href, active }: { icon: string; label: string; href: string; active: boolean }) {
-  const Icon = icon === "laptop_mac" ? LaptopMobile : icon === "desktop_windows" ? ComputerDesktop : Component
-  return <LocalizedClientLink href={href} className={`flex items-center gap-3 rounded-lg p-3 font-body-lg text-body-lg transition-colors duration-200 ${active ? "bg-primary-container font-bold text-on-primary-container hover:bg-surface-container-high" : "text-on-surface-variant hover:bg-surface-container-high"}`}><Icon className="h-5 w-5 shrink-0" /><span>{label}</span></LocalizedClientLink>
 }
 
 export default RefinementList

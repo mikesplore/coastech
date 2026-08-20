@@ -48,7 +48,7 @@ const ProductInfo = ({ product }: ProductInfoProps) => {
           {product.description}
         </Text>
 
-        <div className="grid grid-cols-2 gap-2 rounded-lg border border-gray-200 bg-white py-4 text-sm text-gray-600">
+        <div className="grid grid-cols-1 gap-4 rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600 small:grid-cols-2 md:p-5">
           <div><span className="font-semibold text-gray-900">Delivery</span><br />Fast delivery available</div>
           <div><span className="font-semibold text-gray-900">Returns</span><br />Easy returns policy</div>
         </div>

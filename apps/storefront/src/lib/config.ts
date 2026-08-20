@@ -48,7 +48,7 @@ sdk.client.fetch = async <T>(
       cache: "no-store",
       next: undefined,
     } as FetchArgs
-  } else if (storefrontCacheTtl) {
+  } else if (storefrontCacheTtl && init?.cache !== "no-store") {
     init = {
       ...init,
       next: {

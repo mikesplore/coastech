@@ -20,6 +20,7 @@
     "ingest:hardware": "medusa exec ./src/migration-scripts/ingest-hardware.ts",
     "hardware:sync-local-images": "medusa exec ./src/migration-scripts/sync-local-product-images.ts",
     "repair:prices": "medusa exec ./src/migration-scripts/repair-product-prices.ts",
+    "repair:paystack-provider": "medusa exec ./src/migration-scripts/repair-paystack-provider.ts",
     "products:remove": "medusa exec ./src/migration-scripts/remove-all-products.ts",
     "lint": "medusa lint",
     "test:integration:http": "TEST_TYPE=integration:http NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",

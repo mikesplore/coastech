@@ -11,10 +11,10 @@ function CartMismatchBanner(props: {
 }) {
   const { customer, cart } = props
   const [isPending, setIsPending] = useState(false)
-  const [actionText, setActionText] = useState("Run transfer again")
+  const [actionText, setActionText] = useState("Try again")
 
-  if (!customer || !!cart.customer_id) {
-    return
+  if (!customer || !!cart.customer_id || !cart.items?.length) {
+    return null
   }
 
   const handleSubmit = async () => {
@@ -24,7 +24,7 @@ function CartMismatchBanner(props: {
 
       await transferCart()
     } catch {
-      setActionText("Run transfer again")
+      setActionText("Try again")
       setIsPending(false)
     }
   }
@@ -34,7 +34,7 @@ function CartMismatchBanner(props: {
       <div className="flex flex-col small:flex-row small:gap-2 gap-1 items-center">
         <span className="flex items-center gap-1">
           <ExclamationCircleSolid className="inline" />
-          Something went wrong when we tried to transfer your cart
+          We couldn&apos;t move the items from your guest cart to your account
         </span>
 
         <span>·</span>

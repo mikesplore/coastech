@@ -13,6 +13,7 @@ const S3_PATHNAME = process.env.MEDUSA_CLOUD_S3_PATHNAME
  */
 const nextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins: ["myshop.mikesplore.me"],
   devIndicators: false,
   logging: {
     fetches: {
@@ -27,6 +28,7 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    qualities: [50, 75],
     remotePatterns: [
       {
         protocol: "http",

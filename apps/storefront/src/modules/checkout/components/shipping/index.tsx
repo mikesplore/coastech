@@ -60,7 +60,7 @@ const Shipping: React.FC<ShippingProps> = ({
   >({})
   const [error, setError] = useState<string | null>(null)
   const [shippingMethodId, setShippingMethodId] = useState<string | null>(
-    cart.shipping_methods?.at(-1)?.shipping_option_id || null
+    cart.shipping_methods?.[0]?.shipping_option_id || null
   )
 
   const searchParams = useSearchParams()
@@ -201,19 +201,24 @@ const Shipping: React.FC<ShippingProps> = ({
             </div>
             <div data-testid="delivery-options-container">
               <div className="pb-8 md:pt-0 pt-2">
-                {hasPickupOptions && (
-                  <RadioGroup
-                    value={showPickupOptions}
-                    onChange={(_value) => {
+                <RadioGroup
+                  value={showPickupOptions === PICKUP_OPTION_ON ? PICKUP_OPTION_ON : shippingMethodId}
+                  onChange={(value) => {
+                    if (value === PICKUP_OPTION_ON) {
                       const id = _pickupMethods.find(
                         (option) => !option.insufficient_inventory
                       )?.id
-
                       if (id) {
                         handleSetShippingMethod(id, "pickup")
                       }
-                    }}
-                  >
+                      return
+                    }
+                    if (value) {
+                      handleSetShippingMethod(value, "shipping")
+                    }
+                  }}
+                >
+                {hasPickupOptions && (
                     <Radio
                       value={PICKUP_OPTION_ON}
                       data-testid="delivery-option-radio"
@@ -237,16 +242,8 @@ const Shipping: React.FC<ShippingProps> = ({
                         -
                       </span>
                     </Radio>
-                  </RadioGroup>
                 )}
-                {_shippingMethods?.length || _pickupMethods?.length ? <RadioGroup
-                  value={shippingMethodId}
-                  onChange={(v) => {
-                    if (v) {
-                      return handleSetShippingMethod(v, "shipping")
-                    }
-                  }}
-                >
+                {_shippingMethods?.length || _pickupMethods?.length ? <>
                   {_shippingMethods?.map((option) => {
                     const isDisabled =
                       option.price_type === "calculated" &&
@@ -297,10 +294,16 @@ const Shipping: React.FC<ShippingProps> = ({
                       </Radio>
                     )
                   })}
-                </RadioGroup> : <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" data-testid="no-shipping-methods-message">No shipping methods are available for this order and address. Please contact us if you need help arranging delivery.</div>}
+                </> : <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" data-testid="no-shipping-methods-message">No shipping methods are available for this order and address. Please contact us if you need help arranging delivery.</div>}
+                </RadioGroup>
               </div>
             </div>
           </div>
+
+          <ErrorMessage
+            error={error}
+            data-testid="delivery-option-error-message"
+          />
 
           {showPickupOptions === PICKUP_OPTION_ON && (
             <div className="grid">
@@ -371,16 +374,12 @@ const Shipping: React.FC<ShippingProps> = ({
           )}
 
           <div>
-            <ErrorMessage
-              error={error}
-              data-testid="delivery-option-error-message"
-            />
             <Button
               size="large"
               className="mt"
               onClick={handleSubmit}
               isLoading={isLoading}
-              disabled={!cart.shipping_methods?.[0]}
+              disabled={!cart.shipping_methods?.[0] || !!error}
               data-testid="submit-delivery-option-button"
             >
               Continue to payment
@@ -396,9 +395,9 @@ const Shipping: React.FC<ShippingProps> = ({
                   Method
                 </Text>
                 <Text className="txt-medium text-ui-fg-subtle">
-                  {cart.shipping_methods!.at(-1)!.name}{" "}
+                  {cart.shipping_methods![0].name}{" "}
                   {convertToLocale({
-                    amount: cart.shipping_methods!.at(-1)!.amount!,
+                    amount: cart.shipping_methods![0].amount!,
                     currency_code: cart?.currency_code,
                   })}
                 </Text>

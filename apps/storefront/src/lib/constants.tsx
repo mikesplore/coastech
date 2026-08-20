@@ -33,7 +33,7 @@ export const paymentInfoMap: Record<
     title: "Manual Payment",
     icon: <CreditCard />,
   },
-  pp_paystack: {
+  pp_paystack_paystack: {
     title: "Paystack (test mode)",
     icon: <CreditCard />,
   },
@@ -54,7 +54,7 @@ export const isManual = (providerId?: string) => {
   return providerId?.startsWith("pp_system_default")
 }
 
-export const isPaystack = (providerId?: string) => providerId?.startsWith("pp_paystack")
+export const isPaystack = (providerId?: string) => providerId === "pp_paystack_paystack"
 
 // Add currencies that don't need to be divided by 100
 export const noDivisionCurrencies = [

@@ -45,6 +45,11 @@ type PaystackInitializeResponse = {
   }
 }
 
+type PaystackWebhookData = {
+  reference?: string
+  metadata?: Record<string, unknown>
+}
+
 type PaystackVerifyResponse = {
   status: boolean
   message: string
@@ -141,6 +146,9 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
           amount: amountMinor,
           currency,
           reference,
+          ...(input.data?.session_id
+            ? { metadata: { session_id: input.data.session_id } }
+            : {}),
           ...(this.options_.callback_url
             ? { callback_url: this.options_.callback_url }
             : {}),
@@ -156,6 +164,7 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
       id: initialize.data.reference,
       data: {
         reference: initialize.data.reference,
+        ...(input.data?.cart_id ? { cart_id: input.data.cart_id } : {}),
         amount_minor: amountMinor,
         currency_code: input.currency_code,
         authorization_url: initialize.data.authorization_url,
@@ -264,24 +273,25 @@ class PaystackPaymentProvider extends AbstractPaymentProvider<PaystackOptions> {
     }
 
     const event = String(payload.data["event"] ?? "")
-    const data = (payload.data["data"] ?? {}) as Record<string, any>
+    const data = (payload.data["data"] ?? {}) as PaystackWebhookData & Record<string, any>
     const reference = data.reference
+    const sessionId = data.metadata?.session_id
 
-    if (!reference) {
+    if (!reference || !sessionId) {
       return { action: PaymentActions.NOT_SUPPORTED }
     }
 
     if (event === "charge.success") {
       return {
         action: PaymentActions.SUCCESSFUL,
-        data: { reference } as any,
+        data: { session_id: String(sessionId), reference } as any,
       }
     }
 
     if (event === "charge.failed") {
       return {
         action: PaymentActions.FAILED,
-        data: { reference } as any,
+        data: { session_id: String(sessionId), reference } as any,
       }
     }
 

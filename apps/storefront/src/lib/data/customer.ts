@@ -8,7 +8,6 @@ import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
 import {
   getAuthHeaders,
-  getCacheOptions,
   getCacheTag,
   getCartId,
   getPendingCustomer,
@@ -50,10 +49,6 @@ export const retrieveCustomer =
       ...authHeaders,
     }
 
-    const next = {
-      ...(await getCacheOptions("customers")),
-    }
-
     return await sdk.client
       .fetch<{ customer: HttpTypes.StoreCustomer }>(`/store/customers/me`, {
         method: "GET",
@@ -61,8 +56,7 @@ export const retrieveCustomer =
           fields: "*orders",
         },
         headers,
-        next,
-        cache: "force-cache",
+        cache: "no-store",
       })
       .then(({ customer }) => customer)
       .catch(() => null)
@@ -96,11 +90,17 @@ export async function signup(
     phone: formData.get("phone") as string,
   }
 
+  let registrationToken: string | undefined
+
   try {
-    await sdk.auth.register("customer", "emailpass", {
+    const result = await sdk.auth.register("customer", "emailpass", {
       email: customerForm.email,
       password,
     })
+
+    if (typeof result === "string") {
+      registrationToken = result
+    }
   } catch (error) {
     const fetchError = error as FetchError
     // An existing identity (for example, an admin user with the same email) is
@@ -121,7 +121,7 @@ export async function signup(
 
   // Continue by logging in. The login response tells us whether the backend
   // requires email verification — we don't need a storefront-side flag.
-  return completeLogin(customerForm.email, password)
+  return completeLogin(customerForm.email, password, registrationToken)
 }
 
 export async function login(
@@ -139,7 +139,8 @@ export async function login(
 // email verification is enabled.
 async function completeLogin(
   email: string,
-  password: string
+  password: string,
+  registrationToken?: string
 ): Promise<CustomerAuthState> {
   let result: Awaited<ReturnType<typeof sdk.auth.login>>
 
@@ -187,8 +188,21 @@ async function completeLogin(
   // `/store/customers/me` rejects tokens without a registered actor, so a
   // failed retrieve means we still need to create the customer, then log in
   // again to obtain a customer-bound token.
-  const customerExists = await sdk.store.customer
-    .retrieve({}, { authorization: `Bearer ${token}` })
+  // Use an uncached request here. The SDK customer helper can otherwise reuse
+  // a cached `/store/customers/me` response from a different auth state, which
+  // makes a valid customer token look unauthorized and triggers a duplicate
+  // customer creation attempt.
+  const customerExists = await sdk.client
+    .fetch<{ customer: HttpTypes.StoreCustomer }>(`/store/customers/me`, {
+      method: "GET",
+      query: {
+        fields: "*orders",
+      },
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    })
     .then(() => true)
     .catch(() => false)
 
@@ -204,15 +218,45 @@ async function completeLogin(
           phone: pending?.phone,
         },
         {},
-        { authorization: `Bearer ${token}` }
+        { authorization: `Bearer ${registrationToken ?? token}` }
       )
 
-      token = (await sdk.auth.login("customer", "emailpass", {
+      const reloginResult = await sdk.auth.login("customer", "emailpass", {
         email,
         password,
-      })) as string
+      })
+
+      if (typeof reloginResult !== "string") {
+        return {
+          state: "error",
+          error: "Authentication requires additional steps that aren't supported.",
+        }
+      }
+
+      token = reloginResult
     } catch (error) {
-      return { state: "error", error: String(error) }
+      // The customer may have been created by a previous registration attempt
+      // even though that request ended with an unauthorized response in the
+      // storefront. In that case, refresh the just-issued actorless token
+      // instead of trying to create the same customer again.
+      if (String(error).includes("already has an account")) {
+        try {
+          const refreshedToken = await sdk.auth.refresh()
+
+          if (typeof refreshedToken === "string") {
+            token = refreshedToken
+          } else {
+            return {
+              state: "error",
+              error: "Authentication requires additional steps that aren't supported.",
+            }
+          }
+        } catch (refreshError) {
+          return { state: "error", error: String(refreshError) }
+        }
+      } else {
+        return { state: "error", error: String(error) }
+      }
     }
 
     await removePendingCustomer()
@@ -224,7 +268,9 @@ async function completeLogin(
   revalidateTag(customerCacheTag)
 
   try {
-    await transferCart()
+    // Use the token from this login directly. A cookie written earlier in the
+    // same server action isn't guaranteed to be visible when read again.
+    await transferCart(token)
   } catch (error) {
     return { state: "error", error: String(error) }
   }
@@ -263,14 +309,20 @@ export async function signout(countryCode: string) {
   redirect(`/${countryCode}/account`)
 }
 
-export async function transferCart() {
+export async function transferCart(token?: string) {
   const cartId = await getCartId()
 
   if (!cartId) {
     return
   }
 
-  const headers = await getAuthHeaders()
+  const headers = token
+    ? { authorization: `Bearer ${token}` }
+    : await getAuthHeaders()
+
+  if (!("authorization" in headers)) {
+    throw new Error("You must be logged in to transfer your cart")
+  }
 
   await sdk.store.cart.transferCart(cartId, {}, headers)
 

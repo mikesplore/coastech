@@ -1,5 +1,5 @@
-import { Modules } from "@medusajs/framework/utils"
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
+import { authorizePaystackReference } from "../authorize"
 
 export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void> {
   const reference = String(req.query.reference ?? req.query.trxref ?? "")
@@ -9,25 +9,14 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
     return
   }
 
-  const paymentModule = req.scope.resolve(Modules.PAYMENT)
-  const sessions = await paymentModule.listPaymentSessions({ provider_id: "pp_paystack" })
-  const session = sessions.find(
-    (paymentSession) => String(paymentSession.data?.reference ?? "") === reference
-  )
-
-  if (!session) {
+  const result = await authorizePaystackReference(req, reference)
+  if (result.status === "not_found") {
     res.status(404).json({ message: "Paystack payment session not found" })
     return
   }
 
-  const payment = await paymentModule.authorizePaymentSession(session.id, { reference })
-  const updatedSession = await paymentModule.retrievePaymentSession(session.id)
-
   res.json({
     reference,
-    status: updatedSession.status,
-    authorized: updatedSession.status === "authorized",
-    payment_session_id: session.id,
-    payment_id: payment?.id ?? null,
+    ...result,
   })
 }

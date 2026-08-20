@@ -6,12 +6,14 @@ import { useState } from "react"
 
 type Transaction = {
   id: string
+  payment_id: string | null
   provider_id: string
   amount: number
   currency_code: string
   created_at: string
   captured_at: string | null
   canceled_at: string | null
+  status: string
   reference: string | null
   refunds: Array<{ id: string; amount: number; note: string | null }>
 }
@@ -57,9 +59,10 @@ const TransactionsPage = () => {
       transaction.amount,
       transaction.currency_code,
       transaction.created_at,
+      transaction.status,
       transaction.refunds.reduce((total, refund) => total + refund.amount, 0),
     ])
-    const csv = [["id", "provider", "reference", "amount", "currency", "created_at", "refunded"], ...rows]
+    const csv = [["id", "provider", "reference", "amount", "currency", "created_at", "status", "refunded"], ...rows]
       .map((row) => row.map((value) => JSON.stringify(value)).join(","))
       .join("\n")
     const link = document.createElement("a")
@@ -95,7 +98,7 @@ const TransactionsPage = () => {
           {!isLoading && !transactions.length && <Table.Row><Table.Cell colSpan={6}>No transactions found.</Table.Cell></Table.Row>}
           {transactions.map((transaction) => {
             const refunded = transaction.refunds.reduce((total, refund) => total + refund.amount, 0)
-            const status = transaction.canceled_at ? "Canceled" : transaction.captured_at ? "Captured" : "Authorized"
+            const status = transaction.status
             return (
               <Table.Row key={transaction.id}>
                 <Table.Cell>{transaction.reference ?? transaction.id}</Table.Cell>
@@ -104,7 +107,7 @@ const TransactionsPage = () => {
                 <Table.Cell>{status}</Table.Cell>
                 <Table.Cell>{refunded.toFixed(2)} {transaction.currency_code.toUpperCase()}</Table.Cell>
                 <Table.Cell>
-                  <Button size="small" variant="secondary" disabled={refunded >= transaction.amount} onClick={() => { setRefundId(transaction.id); setRefundAmount(String(transaction.amount - refunded)) }}>Refund</Button>
+                  <Button size="small" variant="secondary" disabled={!transaction.payment_id || refunded >= transaction.amount} onClick={() => { setRefundId(transaction.payment_id); setRefundAmount(String(transaction.amount - refunded)) }}>Refund</Button>
                 </Table.Cell>
               </Table.Row>
             )
