@@ -26,7 +26,7 @@ export default async function orderRefundedEmail({ event: { data }, container }:
     order,
     title: "Refund processed",
     message: "A refund has been processed for your order.",
-    detail: amount ? `Refunded amount: ${(amount / 100).toFixed(2)} ${(order.currency_code ?? "").toUpperCase()}` : undefined,
+    detail: amount ? `Refunded amount: ${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${(order.currency_code ?? "").toUpperCase()}` : undefined,
     logger: container.resolve(ContainerRegistrationKeys.LOGGER),
   })
 }

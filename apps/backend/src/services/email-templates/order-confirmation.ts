@@ -30,6 +30,12 @@ const escapeHtml = (value: unknown) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;")
 
+const formatAmount = (value: unknown) =>
+  Number(value ?? 0).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+
 export const renderOrderConfirmationEmail = ({ order, trackingUrl }: OrderConfirmationData) => {
   const currency = (order.currency_code ?? "").toUpperCase()
   const items = order.items ?? []
@@ -39,7 +45,7 @@ export const renderOrderConfirmationEmail = ({ order, trackingUrl }: OrderConfir
         <tr>
           <td style="padding:8px 0">${escapeHtml(item.title)}</td>
           <td style="padding:8px 0;text-align:center">${item.quantity ?? 0}</td>
-          <td style="padding:8px 0;text-align:right">${currency} ${((item.unit_price ?? 0) / 100).toFixed(2)}</td>
+          <td style="padding:8px 0;text-align:right">${currency} ${formatAmount(item.unit_price)}</td>
         </tr>`
     )
     .join("")
@@ -63,7 +69,7 @@ export const renderOrderConfirmationEmail = ({ order, trackingUrl }: OrderConfir
     <thead><tr><th style="text-align:left;border-bottom:1px solid #ddd">Item</th><th style="border-bottom:1px solid #ddd">Qty</th><th style="text-align:right;border-bottom:1px solid #ddd">Price</th></tr></thead>
     <tbody>${itemRows}</tbody>
   </table>
-  <p style="text-align:right;max-width:640px"><strong>Total: ${currency} ${((order.total ?? 0) / 100).toFixed(2)}</strong></p>
+  <p style="text-align:right;max-width:640px"><strong>Total: ${currency} ${formatAmount(order.total)}</strong></p>
   ${addressLines ? `<h2>Shipping address</h2><p>${addressLines}</p>` : ""}
   <p><a href="${escapeHtml(trackingUrl)}">Track your order</a></p>
 </body></html>`

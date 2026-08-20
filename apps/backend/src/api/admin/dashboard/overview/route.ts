@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { getLastFulfillmentStatus, getLastPaymentStatus } from "@medusajs/core-flows"
 
 type DashboardOrder = {
   id: string
@@ -11,6 +12,9 @@ type DashboardOrder = {
   status?: string
   payment_status?: string
   fulfillment_status?: string
+  payment_collections?: Array<{ status?: string; amount?: number; captured_amount?: number; refunded_amount?: number }>
+  fulfillments?: Array<{ packed_at?: string | Date | null; shipped_at?: string | Date | null; delivered_at?: string | Date | null; canceled_at?: string | Date | null }>
+  items?: Array<{ raw_quantity?: number; detail?: { raw_fulfilled_quantity?: number } }>
 }
 
 type DashboardVariant = {
@@ -26,21 +30,72 @@ type DashboardVariant = {
 
 export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void> {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
-  const [{ data: orders, metadata }, { data: variants }] = await Promise.all([
-    query.graph({
-      entity: "order",
-      fields: ["id", "display_id", "email", "total", "currency_code", "created_at", "status", "payment_status", "fulfillment_status"],
-      filters: { is_draft_order: false },
-      pagination: { take: 500, skip: 0 },
-    }),
-    query.graph({
-      entity: "product_variant",
-      fields: ["id", "title", "sku", "metadata", "product.title", "inventory_items.inventory.location_levels.stocked_quantity"],
-      pagination: { take: 500, skip: 0 },
-    }),
-  ])
+  const logger = req.scope.resolve(ContainerRegistrationKeys.LOGGER)
+  const orderQuery = (async () => {
+    try {
+      return await query.graph({
+        entity: "order",
+        fields: [
+          "id",
+          "display_id",
+          "email",
+          "total",
+          "currency_code",
+          "created_at",
+          "status",
+          "payment_collections.status",
+          "payment_collections.amount",
+          "payment_collections.captured_amount",
+          "payment_collections.refunded_amount",
+          "fulfillments.packed_at",
+          "fulfillments.shipped_at",
+          "fulfillments.delivered_at",
+          "fulfillments.canceled_at",
+          "items.raw_quantity",
+          "items.detail.raw_fulfilled_quantity",
+          "shipping_methods.version",
+        ],
+        filters: { is_draft_order: false },
+        pagination: { take: 500, skip: 0 },
+      })
+    } catch (error) {
+      logger.warn(
+        `Dashboard order details unavailable; falling back to scalar order fields: ${error instanceof Error ? error.message : String(error)}`
+      )
+      try {
+        return await query.graph({
+          entity: "order",
+          fields: ["id", "display_id", "email", "total", "currency_code", "created_at", "status", "shipping_methods.version"],
+          filters: { is_draft_order: false },
+          pagination: { take: 500, skip: 0 },
+        })
+      } catch (fallbackError) {
+        logger.error(
+          `Dashboard order data unavailable; returning an empty order summary: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`
+        )
+        return { data: [], metadata: { count: 0, take: 500, skip: 0 } }
+      }
+    }
+  })()
+  const lowStockQuery = query.graph({
+    entity: "product_variant",
+    fields: ["id", "title", "sku", "metadata", "product.title", "inventory_items.inventory.location_levels.stocked_quantity"],
+    pagination: { take: 500, skip: 0 },
+  })
+  const [orderResult, lowStockResult] = await Promise.allSettled([orderQuery, lowStockQuery])
 
-  const orderRows = orders as DashboardOrder[]
+  if (lowStockResult.status === "rejected") {
+    logger.error("Dashboard low-stock query failed; returning dashboard without inventory data", lowStockResult.reason)
+  }
+
+  const orderData = orderResult.status === "fulfilled" ? orderResult.value : { data: [], metadata: { count: 0, take: 500, skip: 0 } }
+  const { data: orders, metadata } = orderData
+  const variants = lowStockResult.status === "fulfilled" ? lowStockResult.value.data : []
+  const orderRows = (orders as unknown as DashboardOrder[]).map((order) => ({
+    ...order,
+    payment_status: getLastPaymentStatus({ ...order, payment_collections: order.payment_collections ?? [] } as never),
+    fulfillment_status: getLastFulfillmentStatus({ ...order, fulfillments: order.fulfillments ?? [], items: order.items ?? [] } as never),
+  }))
   const statusCounts = orderRows.reduce<Record<string, number>>((counts, order) => {
     const status = order.status ?? "unknown"
     counts[status] = (counts[status] ?? 0) + 1
