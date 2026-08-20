@@ -1,5 +1,6 @@
 import {
   defineMiddlewares,
+  authenticate,
   type MedusaNextFunction,
   type MedusaRequest,
   type MedusaResponse,
@@ -52,7 +53,8 @@ async function validatePaystackPaymentSession(
   _res: MedusaResponse,
   next: MedusaNextFunction
 ) {
-  if (req.body?.provider_id !== "pp_paystack_paystack") {
+  const body = req.body as { provider_id?: string } | undefined
+  if (body?.provider_id !== "pp_paystack_paystack") {
     next()
     return
   }
@@ -228,8 +230,63 @@ async function validateShippingSelection(
   next()
 }
 
+async function logPaymentWebhook(
+  req: MedusaRequest,
+  res: MedusaResponse,
+  next: MedusaNextFunction
+) {
+  const logger = req.scope.resolve(ContainerRegistrationKeys.LOGGER)
+  const payload = (req.body ?? {}) as Record<string, any>
+  const data = (payload.data ?? {}) as Record<string, any>
+  const provider = req.params.provider
+  const reference = data.reference ?? data.trxref ?? null
+  const event = payload.event ?? null
+  const startedAt = Date.now()
+
+  logger.info(
+    `[payment-webhook] received provider=${provider} event=${String(event ?? "unknown")} reference=${String(reference ?? "unknown")}`
+  )
+
+  res.once("finish", () => {
+    logger.info(
+      `[payment-webhook] responded provider=${provider} event=${String(event ?? "unknown")} reference=${String(reference ?? "unknown")} status=${res.statusCode} duration_ms=${Date.now() - startedAt}`
+    )
+  })
+
+  next()
+}
+
 export default defineMiddlewares({
   routes: [
+    {
+      matcher: "/hooks/payment/:provider",
+      method: ["POST"],
+      middlewares: [logPaymentWebhook],
+    },
+    {
+      matcher: "/admin/compatibility-rules*",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
+    {
+      matcher: "/admin/low-stock",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
+    {
+      matcher: "/admin/products/:id/specs",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
+    {
+      matcher: "/admin/promotional-ads*",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
+    {
+      matcher: "/admin/transactions*",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
+    {
+      matcher: "/admin/custom",
+      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+    },
     {
       matcher: "/store/carts/:id/shipping-methods",
       method: ["POST"],
@@ -243,10 +300,13 @@ export default defineMiddlewares({
     {
       matcher: "/admin/products/:id",
       method: ["DELETE"],
-      middlewares: [async (req: MedusaRequest, _res: MedusaResponse, next: MedusaNextFunction) => {
-        await removeProductImages(req)
-        next()
-      }],
+      middlewares: [
+        authenticate("user", ["session", "bearer", "api-key"]),
+        async (req: MedusaRequest, _res: MedusaResponse, next: MedusaNextFunction) => {
+          await removeProductImages(req)
+          next()
+        },
+      ],
     },
   ],
 })
