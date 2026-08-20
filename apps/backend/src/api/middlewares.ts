@@ -279,10 +279,14 @@ export default defineMiddlewares({
       matcher: "/admin/promotional-ads*",
       middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
     },
-    {
-      matcher: "/admin/transactions*",
-      middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
-    },
+  {
+    matcher: "/admin/transactions*",
+    middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+  },
+  {
+    matcher: "/admin/fulfillments/:id/tracking",
+    middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
+  },
     {
       matcher: "/admin/custom",
       middlewares: [authenticate("user", ["session", "bearer", "api-key"])],
